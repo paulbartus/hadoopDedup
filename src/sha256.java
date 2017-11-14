@@ -1,4 +1,3 @@
-import java.io.InputStream;
 import java.security.MessageDigest;
 
 public class sha256 {
