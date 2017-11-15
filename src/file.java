@@ -1,12 +1,13 @@
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.nio.CharBuffer;
 import java.sql.*;
 import java.security.MessageDigest;
 
 public class file {
 
-    private static String inputFileName = "data/file5.txt";
+    private static String inputFileName = "data/file2.png";
 
     static File inputFile = new File(inputFileName);
 
@@ -93,9 +94,9 @@ public class file {
         }
     }
 
-    public static String generateFileID() throws Exception, IOException {
+    public static String generateFileID(String inputFileName) throws Exception, IOException {
 
-        byte[] b = Files.readAllBytes(Paths.get(file.getInputFileName()));
+        byte[] b = Files.readAllBytes(Paths.get(inputFileName));
         byte[] fileID = MessageDigest.getInstance("MD5").digest(b);
         return md5.bytesToHex(fileID);
     }
@@ -116,7 +117,7 @@ public class file {
             sqlStatement = connectMariaDB.createStatement();
 
             String sql_insert_file = "INSERT IGNORE INTO files(id, name, size, chunksize) VALUES ('"
-                    + generateFileID()
+                    + generateFileID(inputFileName)
                     + "', '"
                     + inputFileName
                     + "', "
@@ -159,10 +160,10 @@ public class file {
                 insertIntoDB();
                 System.out.println("Successfully added!");
 
-                File fileDirectory = new File("dataset/" + getFileParent());
-                if (!fileDirectory.exists()) {
+                File fileDirectoryDedup = new File("dataset/" + getFileParent());
+                if (!fileDirectoryDedup.exists()) {
 
-                    fileDirectory.mkdir();
+                    fileDirectoryDedup.mkdir();
                 }
 
                 BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName));
@@ -189,7 +190,7 @@ public class file {
                     sql_insert_blob.setString(1, sha256.getSha256(buffer.toString()));
                     sql_insert_blob.executeUpdate();
 
-                    fileRecipe.write(sha256.getSha256(buffer.toString()));
+                    fileRecipe.write(sha256.getSha256(buffer.toString())+"\n");
                     remainingChunks -= 1;
                 }
 
@@ -207,6 +208,9 @@ public class file {
 
                 fileRecipe.close();
                 System.out.println("File deduplicated successfully!");
+            } else {
+
+                System.out.println("File already in the database!");
             }
 
         } catch (Exception e) {
@@ -267,26 +271,58 @@ public class file {
 
                 System.out.print("Reconstructing ... ");
 
+                File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent());
+                if (!fileDirectoryReconstruct.exists()) {
+
+                    fileDirectoryReconstruct.mkdir();
+                }
+
+                BufferedWriter newFile = new BufferedWriter(new FileWriter("reconstructed/" + inputFileName));
+
                 String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                         + inputFileName
                         + "';";
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
-                System.out.println(chunkProperties.getBytes("id"));
-                System.out.println(chunkProperties.getInt("size"));
-                System.out.println(chunkProperties.getInt("chunksize"));
+
+                String originalFileID = chunkProperties.getNString("id");
+                long originalFileSize = chunkProperties.getInt("size");
+                int originalChunkSize = chunkProperties.getInt("chunksize");
+
+                BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/"+inputFileName));
+
+                long totalChunks = getNumberOfChunks();
+                while (totalChunks > 0) {
+
+                    String sql_read_chunk_content = "SELECT content from chunks where id = '"
+                            + fileRecipe.readLine()
+                            + "' LIMIT 1;";
+                    ResultSet chunkContent = sqlStatement.executeQuery(sql_read_chunk_content);
+                    chunkContent.next();
+                    //newFile.write(chunkContent.getBlob("content"));
+                    //chunkContent.getNString("content");
+                    newFile.write(chunkContent.getNString("content"));
+                    //chunkContent.getBinaryStream("content");
+                    //chunkContent.getBlob("content");
+
+                    totalChunks -= 1;
+                }
 
 
+                fileRecipe.close();
+                newFile.close();
 
+                if ( originalFileID.compareTo(generateFileID("reconstructed/"+inputFileName)) == 0) {
 
+                    System.out.println("File reconstructed successfully!");
+
+                } else {
+
+                    System.out.println("Error reconstructing the file!");
+                }
 
             }
-
-
-
-
-
 
         } catch (Exception e) {
             if (connectMariaDB != null) {
@@ -317,7 +353,6 @@ public class file {
                 se.printStackTrace();
             }
         }
-        System.out.println("File reconstructed successfully!");
         return 0;
     }
 
