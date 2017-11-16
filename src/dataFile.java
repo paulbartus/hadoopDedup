@@ -4,64 +4,60 @@ import java.nio.file.Paths;
 import java.sql.*;
 import java.security.MessageDigest;
 
-public class file {
+public class dataFile extends File{
 
-    private static String inputFileName = "data/genome.pdf";
+    private String inputFileName;
 
-    static File inputFile = new File(inputFileName);
-
+    chunk dedupChunk = new chunk(512);
 
     //Getters
-    public static String getInputFileName(){
+    public String getInputFileName(){
 
         return inputFileName;
-
     }
 
-    public static long getFileLength(String inputFileName){
+    public long getFileLength(){
 
-        return inputFile.length();
+        return length();
     }
 
-    public static String getFileParent(String inputFileName){
+    public String getFileParent(){
 
-        return inputFile.getParent();
+        return getParent();
     }
 
-    public static long getLastChunkSize(String inputFileName){
+    public long getLastChunkSize(){
 
-        long lastChunkSize = (int) (getFileLength(inputFileName) % chunk.getChunkSize());
+        long lastChunkSize = (int) (getFileLength() % dedupChunk.getChunkSize());
         return lastChunkSize;
     }
 
-    public static long getNumberOfChunks(){
+    public long getNumberOfChunks(){
 
-        long numberOfChunks = (int) (getFileLength(inputFileName) / chunk.getChunkSize());
-        if (getLastChunkSize(inputFileName) > 0){
+        long numberOfChunks = (int) (getFileLength() / dedupChunk.getChunkSize());
+        if (getLastChunkSize() > 0){
 
             numberOfChunks += 1;
         }
         return numberOfChunks;
     }
 
-
     // Setters
-    public void setInputFileName() {
+    public void setInputFileName(String inputFileName) {
 
         this.inputFileName = inputFileName;
+    }
 
+    //Constructors
+    public dataFile(String inputFileName) {
+
+        super(inputFileName);
+        this.inputFileName = inputFileName;
+        File inputFile = new File(inputFileName);
     }
 
 
-        //Constructors
-    public file(String inputFileName){
-
-        this.inputFileName = inputFileName;
-
-    }
-
-
-    public static boolean checkIfExistsInDB() throws Exception, IOException, SQLException {
+    public boolean checkIfExistsInDB() throws Exception, IOException, SQLException {
 
         Connection connectMariaDB = null;
         Statement sqlStatement = null;
@@ -93,14 +89,14 @@ public class file {
         }
     }
 
-    public static String generateFileID(String inputFileName) throws Exception, IOException {
+    public String generateFileID(String inputFileName) throws Exception, IOException {
 
         byte[] b = Files.readAllBytes(Paths.get(inputFileName));
         byte[] fileID = MessageDigest.getInstance("MD5").digest(b);
         return md5.bytesToHex(fileID);
     }
 
-    public static void insertIntoDB() throws Exception, IOException, SQLException {
+    public void insertIntoDB() throws Exception, IOException, SQLException {
 
         Connection connectMariaDB = null;
         Statement sqlStatement = null;
@@ -120,9 +116,9 @@ public class file {
                     + "', '"
                     + inputFileName
                     + "', "
-                    + getFileLength(inputFileName)
+                    + getFileLength()
                     + ", "
-                    + chunk.getChunkSize()
+                    + dedupChunk.getChunkSize()
                     + ");";
 
             sqlStatement.executeQuery(sql_insert_file);
@@ -134,10 +130,10 @@ public class file {
         }
     }
 
-    public static int dedupFile(String inputFileName){
+    public int dedupFile(){
 
-        byte[] chunkByte = new byte[chunk.getChunkSize()];
-        byte[] lastChunkByte = new byte[(int) file.getLastChunkSize(inputFileName)];
+        byte[] chunkByte = new byte[dedupChunk.getChunkSize()];
+        byte[] lastChunkByte = new byte[(int) getLastChunkSize()];
 
         Connection connectMariaDB = null;
         Statement sqlStatement = null;
@@ -158,7 +154,7 @@ public class file {
                 System.out.print("The file does not exists in the database ... ");
                 insertIntoDB();
 
-                File fileDirectoryDedup = new File("dataset/" + getFileParent(inputFileName));
+                File fileDirectoryDedup = new File("dataset/" + getFileParent());
                 if (!fileDirectoryDedup.exists()) {
 
                     fileDirectoryDedup.mkdir();
@@ -174,14 +170,15 @@ public class file {
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
 
                 long remainingChunks = getNumberOfChunks();
+                long lastChunkSize = getLastChunkSize();
 
                 PreparedStatement sql_insert_blob = null;
 
-                while ((remainingChunks > 1 && file.getLastChunkSize(inputFileName) > 0) ||
-                        (remainingChunks > 0 && file.getLastChunkSize(inputFileName) == 0)) {
+                while ((remainingChunks > 1 && lastChunkSize > 0) ||
+                        (remainingChunks > 0 && lastChunkSize == 0)) {
 
                     sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
-                    sql_insert_blob.setBinaryStream(2, chunkStream, chunk.getChunkSize());
+                    sql_insert_blob.setBinaryStream(2, chunkStream, dedupChunk.getChunkSize());
 
                     buffer.write(chunkByte, 0, chunk1.read(chunkByte));
 
@@ -192,10 +189,10 @@ public class file {
                     remainingChunks -= 1;
                 }
 
-                if (getLastChunkSize(inputFileName) > 0) {
+                if (lastChunkSize > 0) {
 
                     sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
-                    sql_insert_blob.setBinaryStream(2, chunkStream, getLastChunkSize(inputFileName));
+                    sql_insert_blob.setBinaryStream(2, chunkStream, lastChunkSize);
 
                     buffer.write(lastChunkByte, 0, chunk1.read(lastChunkByte));
 
@@ -222,7 +219,6 @@ public class file {
                 }
             }
 
-
         } finally {
             if (sqlStatement != null) {
                 try{
@@ -244,8 +240,7 @@ public class file {
     }
 
 
-
-    public static int reconstructFile(String inputFileName) {
+    public int reconstructFile() {
 
         Connection connectMariaDB = null;
         Statement sqlStatement = null;
@@ -269,7 +264,7 @@ public class file {
 
                 System.out.print("Reconstructing ... ");
 
-                File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent(inputFileName));
+                File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent());
                 if (!fileDirectoryReconstruct.exists()) {
 
                     fileDirectoryReconstruct.mkdir();
@@ -347,7 +342,6 @@ public class file {
                 }
             }
 
-
         } finally {
             if (sqlStatement != null) {
                 try{
@@ -367,5 +361,5 @@ public class file {
         }
         return 0;
     }
-
 }
+

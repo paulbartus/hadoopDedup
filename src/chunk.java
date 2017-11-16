@@ -1,10 +1,10 @@
 
 public class chunk {
 
-    private static int chunkSize = 512;
+    private int chunkSize;
 
     //Getters
-    public static int getChunkSize(){
+    public int getChunkSize(){
 
         return chunkSize;
     }

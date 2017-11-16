@@ -1,11 +1,13 @@
 
 public class hadoopDedup {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception {
 
-        file.dedupFile(file.getInputFileName());
+        dataFile dedupFile = new dataFile("data/file2.png");
 
-        file.reconstructFile(file.getInputFileName());
+        dedupFile.dedupFile();
+
+        dedupFile.reconstructFile();
 
     }
 }
