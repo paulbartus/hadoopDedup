@@ -1,13 +1,12 @@
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.nio.CharBuffer;
 import java.sql.*;
 import java.security.MessageDigest;
 
 public class file {
 
-    private static String inputFileName = "data/file2.png";
+    private static String inputFileName = "data/genome.pdf";
 
     static File inputFile = new File(inputFileName);
 
@@ -19,26 +18,26 @@ public class file {
 
     }
 
-    public static long getFileLength(){
+    public static long getFileLength(String inputFileName){
 
         return inputFile.length();
     }
 
-    public static String getFileParent(){
+    public static String getFileParent(String inputFileName){
 
         return inputFile.getParent();
     }
 
-    public static long getLastChunkSize(){
+    public static long getLastChunkSize(String inputFileName){
 
-        long lastChunkSize = (int) (getFileLength() % chunk.getChunkSize());
+        long lastChunkSize = (int) (getFileLength(inputFileName) % chunk.getChunkSize());
         return lastChunkSize;
     }
 
     public static long getNumberOfChunks(){
 
-        long numberOfChunks = (int) (getFileLength() / chunk.getChunkSize());
-        if (getLastChunkSize() > 0){
+        long numberOfChunks = (int) (getFileLength(inputFileName) / chunk.getChunkSize());
+        if (getLastChunkSize(inputFileName) > 0){
 
             numberOfChunks += 1;
         }
@@ -121,7 +120,7 @@ public class file {
                     + "', '"
                     + inputFileName
                     + "', "
-                    + getFileLength()
+                    + getFileLength(inputFileName)
                     + ", "
                     + chunk.getChunkSize()
                     + ");";
@@ -138,7 +137,7 @@ public class file {
     public static int dedupFile(String inputFileName){
 
         byte[] chunkByte = new byte[chunk.getChunkSize()];
-        byte[] lastChunkByte = new byte[(int) file.getLastChunkSize()];
+        byte[] lastChunkByte = new byte[(int) file.getLastChunkSize(inputFileName)];
 
         Connection connectMariaDB = null;
         Statement sqlStatement = null;
@@ -158,9 +157,8 @@ public class file {
 
                 System.out.print("The file does not exists in the database ... ");
                 insertIntoDB();
-                System.out.println("Successfully added!");
 
-                File fileDirectoryDedup = new File("dataset/" + getFileParent());
+                File fileDirectoryDedup = new File("dataset/" + getFileParent(inputFileName));
                 if (!fileDirectoryDedup.exists()) {
 
                     fileDirectoryDedup.mkdir();
@@ -179,11 +177,11 @@ public class file {
 
                 PreparedStatement sql_insert_blob = null;
 
-                while ((remainingChunks > 1 && file.getLastChunkSize() > 0) ||
-                        (remainingChunks > 0 && file.getLastChunkSize() == 0)) {
+                while ((remainingChunks > 1 && file.getLastChunkSize(inputFileName) > 0) ||
+                        (remainingChunks > 0 && file.getLastChunkSize(inputFileName) == 0)) {
 
                     sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
-                    sql_insert_blob.setBinaryStream(2, chunkStream, 512);
+                    sql_insert_blob.setBinaryStream(2, chunkStream, chunk.getChunkSize());
 
                     buffer.write(chunkByte, 0, chunk1.read(chunkByte));
 
@@ -194,10 +192,10 @@ public class file {
                     remainingChunks -= 1;
                 }
 
-                if (file.getLastChunkSize() > 0) {
+                if (getLastChunkSize(inputFileName) > 0) {
 
                     sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
-                    sql_insert_blob.setBinaryStream(2, chunkStream, file.getLastChunkSize());
+                    sql_insert_blob.setBinaryStream(2, chunkStream, getLastChunkSize(inputFileName));
 
                     buffer.write(lastChunkByte, 0, chunk1.read(lastChunkByte));
 
@@ -207,7 +205,7 @@ public class file {
                 }
 
                 fileRecipe.close();
-                System.out.println("File deduplicated successfully!");
+                System.out.println("Successfully added!");
             } else {
 
                 System.out.println("File already in the database!");
@@ -271,13 +269,15 @@ public class file {
 
                 System.out.print("Reconstructing ... ");
 
-                File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent());
+                File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent(inputFileName));
                 if (!fileDirectoryReconstruct.exists()) {
 
                     fileDirectoryReconstruct.mkdir();
                 }
 
-                BufferedWriter newFile = new BufferedWriter(new FileWriter("reconstructed/" + inputFileName));
+                //BufferedWriter newFile = new BufferedWriter(new FileWriter("reconstructed/" + inputFileName));
+                File newFile = new File("reconstructed/" + inputFileName);
+                FileOutputStream newFileOutputStream = new FileOutputStream(newFile);
 
                 String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                         + inputFileName
@@ -298,20 +298,28 @@ public class file {
                     String sql_read_chunk_content = "SELECT content from chunks where id = '"
                             + fileRecipe.readLine()
                             + "' LIMIT 1;";
-                    ResultSet chunkContent = sqlStatement.executeQuery(sql_read_chunk_content);
+                    PreparedStatement statement = connectMariaDB.prepareStatement(sql_read_chunk_content);
+
+                    ResultSet chunkContent = statement.executeQuery();
+
                     chunkContent.next();
-                    //newFile.write(chunkContent.getBlob("content"));
-                    //chunkContent.getNString("content");
-                    newFile.write(chunkContent.getNString("content"));
-                    //chunkContent.getBinaryStream("content");
-                    //chunkContent.getBlob("content");
+                    InputStream stream = chunkContent.getBinaryStream("content");
+                    byte[] buffer;
+                    if (totalChunks > 1) {
+                        buffer = new byte[chunk.getChunkSize()];
+                    } else {
+                        buffer = new byte[(int) getLastChunkSize(inputFileName)];
+                    }
+                    while (stream.read(buffer) > 0){
+                        newFileOutputStream.write(buffer);
+                    }
 
                     totalChunks -= 1;
                 }
 
-
+                newFileOutputStream.close();
                 fileRecipe.close();
-                newFile.close();
+
 
                 if ( originalFileID.compareTo(generateFileID("reconstructed/"+inputFileName)) == 0) {
 
