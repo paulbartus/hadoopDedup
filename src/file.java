@@ -285,14 +285,18 @@ public class file {
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
+                BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/"+inputFileName));
 
                 String originalFileID = chunkProperties.getNString("id");
                 long originalFileSize = chunkProperties.getInt("size");
                 int originalChunkSize = chunkProperties.getInt("chunksize");
+                long lastChunkSize = (int) originalFileSize % originalChunkSize;
+                long totalChunks = (int) originalFileSize / originalChunkSize;
 
-                BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/"+inputFileName));
+                if (lastChunkSize > 0 ){
+                    totalChunks += 1;
+                }
 
-                long totalChunks = getNumberOfChunks();
                 while (totalChunks > 0) {
 
                     String sql_read_chunk_content = "SELECT content from chunks where id = '"
@@ -306,9 +310,9 @@ public class file {
                     InputStream stream = chunkContent.getBinaryStream("content");
                     byte[] buffer;
                     if (totalChunks > 1) {
-                        buffer = new byte[chunk.getChunkSize()];
+                        buffer = new byte[originalChunkSize];
                     } else {
-                        buffer = new byte[(int) getLastChunkSize(inputFileName)];
+                        buffer = new byte[(int) lastChunkSize];
                     }
                     while (stream.read(buffer) > 0){
                         newFileOutputStream.write(buffer);
