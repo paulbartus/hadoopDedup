@@ -10,6 +10,8 @@ public class dataFile extends File{
 
     chunk dedupChunk = new chunk(512);
 
+    connectionMariaDB connectionMariaDB = new connectionMariaDB();
+
     //Getters
     public String getInputFileName(){
 
@@ -152,7 +154,6 @@ public class dataFile extends File{
             if(! checkIfExistsInDB()) {
 
                 System.out.print("The file does not exists in the database ... ");
-                insertIntoDB();
 
                 File fileDirectoryDedup = new File("dataset/" + getFileParent());
                 if (!fileDirectoryDedup.exists()) {
@@ -202,6 +203,7 @@ public class dataFile extends File{
                 }
 
                 fileRecipe.close();
+                insertIntoDB();
                 System.out.println("Successfully added!");
             } else {
 
@@ -270,7 +272,6 @@ public class dataFile extends File{
                     fileDirectoryReconstruct.mkdir();
                 }
 
-                //BufferedWriter newFile = new BufferedWriter(new FileWriter("reconstructed/" + inputFileName));
                 File newFile = new File("reconstructed/" + inputFileName);
                 FileOutputStream newFileOutputStream = new FileOutputStream(newFile);
 
@@ -328,9 +329,7 @@ public class dataFile extends File{
 
                     System.out.println("Error reconstructing the file!");
                 }
-
             }
-
         } catch (Exception e) {
             if (connectMariaDB != null) {
                 try {

@@ -1,14 +1,22 @@
+import java.io.*;
 
 public class hadoopDedup {
 
     public static void main(String[] args) throws Exception {
 
-        dataFile dedupFile = new dataFile("data/file2.png");
+        String directory = "data/";
 
-        dedupFile.dedupFile();
+        File dataDirectory = new File(directory);
+        File[] listOfFiles = dataDirectory.listFiles();
 
-        dedupFile.reconstructFile();
-
+        for (File file : listOfFiles){
+            if (file.isFile()){
+                System.out.println(file.getPath());
+                dataFile dedupFile = new dataFile(file.getPath());
+                dedupFile.dedupFile();
+                dedupFile.reconstructFile();
+            }
+        }
     }
 }
 
