@@ -81,7 +81,6 @@ public class dataFile extends File{
             ResultSet fileExists = sqlStatement.executeQuery(sql_check_if_exists_file);
             fileExists.next();
             boolean exists = fileExists.getBoolean(1);
-
             return exists;
 
         } finally {
@@ -132,7 +131,7 @@ public class dataFile extends File{
         }
     }
 
-    public int dedupFile(){
+    public void dedupFile() throws Exception{
 
         byte[] chunkByte = new byte[dedupChunk.getChunkSize()];
         byte[] lastChunkByte = new byte[(int) getLastChunkSize()];
@@ -210,39 +209,39 @@ public class dataFile extends File{
                 System.out.println("File already in the database!");
             }
 
-        } catch (Exception e) {
+        } catch (Exception exception) {
+            exception.printStackTrace();
             if (connectMariaDB != null) {
                 try {
                     sqlStatement.close();
                     connectMariaDB.rollback();
                     System.err.print("Transaction is being rolled back");
-                } catch (SQLException se) {
-                    se.printStackTrace();
+                } catch (SQLException sqlException) {
+                    sqlException.printStackTrace();
                 }
-            }
+            } else { System.out.println("The DB connection was not established!");}
 
         } finally {
             if (sqlStatement != null) {
                 try{
                     sqlStatement.close();
                     connectMariaDB.setAutoCommit(true);
-                } catch (SQLException se) {
-                    se.printStackTrace();
+                } catch (SQLException sqlException) {
+                    sqlException.printStackTrace();
                 }
             }
             try {
                 if (connectMariaDB != null) {
                     connectMariaDB.close();
                 }
-            } catch (SQLException se) {
-                se.printStackTrace();
+            } catch (SQLException sqlException) {
+                sqlException.printStackTrace();
             }
         }
-        return 0;
     }
 
 
-    public int reconstructFile() {
+    public void reconstructFile() throws Exception{
 
         Connection connectMariaDB = null;
         Statement sqlStatement = null;
@@ -320,7 +319,6 @@ public class dataFile extends File{
                 newFileOutputStream.close();
                 fileRecipe.close();
 
-
                 if ( originalFileID.compareTo(generateFileID("reconstructed/"+inputFileName)) == 0) {
 
                     System.out.println("File reconstructed successfully!");
@@ -330,7 +328,8 @@ public class dataFile extends File{
                     System.out.println("Error reconstructing the file!");
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception exception) {
+            exception.printStackTrace();
             if (connectMariaDB != null) {
                 try {
                     sqlStatement.close();
@@ -339,26 +338,25 @@ public class dataFile extends File{
                 } catch (SQLException se) {
                     se.printStackTrace();
                 }
-            }
+            } else { System.out.println("The DB connection was not established!");}
 
         } finally {
             if (sqlStatement != null) {
                 try{
                     sqlStatement.close();
                     connectMariaDB.setAutoCommit(true);
-                } catch (SQLException se) {
-                    se.printStackTrace();
+                } catch (SQLException sqlException) {
+                    sqlException.printStackTrace();
                 }
             }
             try {
                 if (connectMariaDB != null) {
                     connectMariaDB.close();
                 }
-            } catch (SQLException se) {
-                se.printStackTrace();
+            } catch (SQLException sqlException) {
+                sqlException.printStackTrace();
             }
         }
-        return 0;
     }
 }
 

@@ -1,28 +1,28 @@
 
 public class connectionMariaDB {
 
-    private static String JDBC_DRIVER = "org.mariadb.jdbc.Driver";
-    private static String DB_URL = "jdbc:mariadb://localhost/ext4";
-    private static String DB_USER = "root";
-    private static String DB_PASSWORD = "54h5dynKPf";
+    private String JDBC_DRIVER = "org.mariadb.jdbc.Driver";
+    private String DB_URL = "jdbc:mariadb://localhost:3306/ext4";
+    private String DB_USER = "root";
+    private String DB_PASSWORD = "54h5dynKPf";
 
     //Getters
-    public static String getJDBC_DRIVER() {
+    public String getJDBC_DRIVER() {
 
         return JDBC_DRIVER;
     }
 
-    public static String getDB_URL() {
+    public String getDB_URL() {
 
         return DB_URL;
     }
 
-    public static String getDB_USER() {
+    public String getDB_USER() {
 
         return DB_USER;
     }
 
-    public static String getDB_PASSWORD() {
+    public String getDB_PASSWORD() {
 
         return DB_PASSWORD;
     }
