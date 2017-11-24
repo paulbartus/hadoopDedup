@@ -1,10 +1,13 @@
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 
 public class connectionMariaDB {
 
-    private String JDBC_DRIVER = "org.mariadb.jdbc.Driver";
-    private String DB_URL = "jdbc:mariadb://localhost:3306/ext4";
-    private String DB_USER = "root";
-    private String DB_PASSWORD = "54h5dynKPf";
+    private static final String JDBC_DRIVER = "org.mariadb.jdbc.Driver";
+    private static final String DB_URL = "jdbc:mariadb://localhost:3306/ext4";
+    private static final String DB_USER = "root";
+    private static final String DB_PASSWORD = "54h5dynKPf";
 
     //Getters
     public String getJDBC_DRIVER() {
@@ -27,37 +30,33 @@ public class connectionMariaDB {
         return DB_PASSWORD;
     }
 
-    //Setters
-    public void setJDBC_DRIVER(String JDBC_DRIVER) {
-
-        this.JDBC_DRIVER = JDBC_DRIVER;
-    }
-
-    public void setDB_URL(String DB_URL) {
-
-        this.DB_URL = DB_URL;
-    }
-
-    public void setDB_USER(String DB_USER) {
-
-        this.DB_USER = DB_USER;
-    }
-
-    public void setDB_PASSWORD(String DB_PASSWORD) {
-
-        this.DB_PASSWORD = DB_PASSWORD;
-    }
-
-    //Constructors
-    public connectionMariaDB(String JDBC_DRIVER, String DB_URL, String DB_USER, String DB_PASSWORD) {
-
-        this.JDBC_DRIVER = JDBC_DRIVER;
-        this.DB_URL = DB_URL;
-        this.DB_USER = DB_USER;
-        this.DB_PASSWORD = DB_PASSWORD;
-    }
-
     public connectionMariaDB(){
+
+    }
+
+
+    public Connection getDBConnection() throws Exception {
+
+        try { Class.forName(JDBC_DRIVER);
+
+        } catch (ClassNotFoundException exception) {
+
+            System.out.println(exception.getMessage());
+        }
+
+        try { Connection connectMariaDB = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+
+            return connectMariaDB;
+        } catch (SQLException exception) {
+
+            System.out.println(exception.getMessage());
+        }
+        return null;
+    }
+
+    public void closeDBConnection(Connection connectMariaDB) throws Exception {
+
+        connectMariaDB.close();
 
     }
 }

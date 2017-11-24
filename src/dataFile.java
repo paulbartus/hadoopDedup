@@ -1,8 +1,9 @@
+import org.apache.commons.codec.digest.DigestUtils;
+
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
-import org.apache.commons.codec.digest.DigestUtils;
 
 
 public class dataFile extends File{
@@ -67,9 +68,7 @@ public class dataFile extends File{
                 + inputFileName
                 + "')";
 
-        Class.forName(connectionMariaDB.getJDBC_DRIVER());
-        Connection connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(), connectionMariaDB.getDB_PASSWORD());
+        Connection connectMariaDB = connectionMariaDB.getDBConnection();
 
         Statement sqlStatement = connectMariaDB.createStatement();
 
@@ -81,7 +80,7 @@ public class dataFile extends File{
             return exists;
 
         } finally {
-            connectMariaDB.close();
+            connectionMariaDB.closeDBConnection(connectMariaDB);
             sqlStatement.close();
         }
     }
@@ -104,10 +103,7 @@ public class dataFile extends File{
                 + dedupChunk.getChunkSize()
                 + ");";
 
-        Class.forName(connectionMariaDB.getJDBC_DRIVER());
-
-        Connection connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(), connectionMariaDB.getDB_PASSWORD());
+        Connection connectMariaDB = connectionMariaDB.getDBConnection();
 
         Statement sqlStatement = connectMariaDB.createStatement();
 
@@ -117,7 +113,7 @@ public class dataFile extends File{
 
         } finally {
 
-            connectMariaDB.close();
+            connectionMariaDB.closeDBConnection(connectMariaDB);
             sqlStatement.close();
         }
     }
@@ -131,9 +127,9 @@ public class dataFile extends File{
         PreparedStatement sql_insert_blob = null;
 
         try {
-            Class.forName(connectionMariaDB.getJDBC_DRIVER());
-            connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(), connectionMariaDB.getDB_PASSWORD());
+
+            connectMariaDB = connectionMariaDB.getDBConnection();
+
             connectMariaDB.setAutoCommit(false);
 
             String sql_insert_chunks = "INSERT IGNORE INTO chunks(id, count, content) VALUES( ?, 1, ?)"
@@ -204,7 +200,7 @@ public class dataFile extends File{
                     sql_insert_blob.close();
                 }
                 if (connectMariaDB != null) {
-                    connectMariaDB.close();
+                    connectionMariaDB.closeDBConnection(connectMariaDB);
                 }
             } catch (SQLException sqlException3) {
                 System.out.println(sqlException3.getMessage());
@@ -219,11 +215,7 @@ public class dataFile extends File{
                 + inputFileName
                 + "';";
 
-        Class.forName(connectionMariaDB.getJDBC_DRIVER());
-
-        Connection connectMariaDB = DriverManager.getConnection( connectionMariaDB.getDB_URL(),
-                connectionMariaDB.getDB_USER(),
-                connectionMariaDB.getDB_PASSWORD());
+        Connection connectMariaDB = connectionMariaDB.getDBConnection();
 
         Statement sqlStatement = connectMariaDB.createStatement();
 
@@ -306,7 +298,7 @@ public class dataFile extends File{
                     sqlStatement.close();
                 }
                 if (connectMariaDB != null) {
-                    connectMariaDB.close();
+                    connectionMariaDB.closeDBConnection(connectMariaDB);
                 }
             } catch (SQLException sqlException) {
                 System.out.println(sqlException.getMessage());
