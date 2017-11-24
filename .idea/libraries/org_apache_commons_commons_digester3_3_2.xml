@@ -1,0 +1,24 @@
+<component name="libraryTable">
+  <library name="org.apache.commons:commons-digester3:3.2" type="repository">
+    <properties maven-id="org.apache.commons:commons-digester3:3.2" />
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/lib/commons-digester3-3.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/cglib-2.2.2.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/asm-3.3.1.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-beanutils-1.8.3.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1.jar!/" />
+    </CLASSES>
+    <JAVADOC>
+      <root url="jar://$PROJECT_DIR$/lib/commons-digester3-3.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/cglib-2.2.2-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-beanutils-1.8.3-javadoc.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1-javadoc.jar!/" />
+    </JAVADOC>
+    <SOURCES>
+      <root url="jar://$PROJECT_DIR$/lib/commons-digester3-3.2-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/cglib-2.2.2-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-beanutils-1.8.3-sources.jar!/" />
+      <root url="jar://$PROJECT_DIR$/lib/commons-logging-1.1.1-sources.jar!/" />
+    </SOURCES>
+  </library>
+</component>

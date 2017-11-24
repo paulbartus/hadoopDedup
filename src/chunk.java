@@ -2,6 +2,7 @@
 public class chunk {
 
     private int chunkSize;
+    private String chunkID;
 
     //Getters
     public int getChunkSize(){
@@ -9,10 +10,20 @@ public class chunk {
         return chunkSize;
     }
 
+    public String getChunkID(){
+
+        return chunkID;
+    }
+
     // Setters
     public void setChunkSize(int chunkSize){
 
         this.chunkSize = chunkSize;
+    }
+
+    public void setChunkID(String chunkID){
+
+        this.chunkID = chunkID;
     }
 
     //Constructors

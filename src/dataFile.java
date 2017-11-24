@@ -2,7 +2,8 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
-import java.security.MessageDigest;
+import org.apache.commons.codec.digest.DigestUtils;
+
 
 public class dataFile extends File{
 
@@ -61,22 +62,18 @@ public class dataFile extends File{
 
     public boolean checkIfExistsInDB() throws Exception, IOException, SQLException {
 
-        Connection connectMariaDB = null;
-        Statement sqlStatement = null;
+        String sql_check_if_exists_file = "SELECT EXISTS (SELECT id FROM files WHERE "
+                + "name = '"
+                + inputFileName
+                + "')";
 
-        try {
+        Class.forName(connectionMariaDB.getJDBC_DRIVER());
+        Connection connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
+                    connectionMariaDB.getDB_USER(), connectionMariaDB.getDB_PASSWORD());
 
-            Class.forName(connectionMariaDB.getJDBC_DRIVER());
+        Statement sqlStatement = connectMariaDB.createStatement();
 
-            connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(),
-                    connectionMariaDB.getDB_PASSWORD());
-
-            sqlStatement = connectMariaDB.createStatement();
-            String sql_check_if_exists_file = "SELECT EXISTS (SELECT id FROM files WHERE "
-                    + "name = '"
-                    + inputFileName
-                    + "')";
+        try{
 
             ResultSet fileExists = sqlStatement.executeQuery(sql_check_if_exists_file);
             fileExists.next();
@@ -84,7 +81,6 @@ public class dataFile extends File{
             return exists;
 
         } finally {
-
             connectMariaDB.close();
             sqlStatement.close();
         }
@@ -92,35 +88,30 @@ public class dataFile extends File{
 
     public String generateFileID(String inputFileName) throws Exception, IOException {
 
-        byte[] b = Files.readAllBytes(Paths.get(inputFileName));
-        byte[] fileID = MessageDigest.getInstance("MD5").digest(b);
-        return md5.bytesToHex(fileID);
+        String fileID = DigestUtils.md5Hex(Files.readAllBytes(Paths.get(inputFileName)));
+        return fileID;
     }
 
     public void insertIntoDB() throws Exception, IOException, SQLException {
 
-        Connection connectMariaDB = null;
-        Statement sqlStatement = null;
+        String sql_insert_file = "INSERT IGNORE INTO files(id, name, size, chunksize) VALUES ('"
+                + generateFileID(inputFileName)
+                + "', '"
+                + inputFileName
+                + "', "
+                + getFileLength()
+                + ", "
+                + dedupChunk.getChunkSize()
+                + ");";
 
-        try {
+        Class.forName(connectionMariaDB.getJDBC_DRIVER());
 
-            Class.forName(connectionMariaDB.getJDBC_DRIVER());
+        Connection connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
+                    connectionMariaDB.getDB_USER(), connectionMariaDB.getDB_PASSWORD());
 
-            connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(),
-                    connectionMariaDB.getDB_PASSWORD());
+        Statement sqlStatement = connectMariaDB.createStatement();
 
-            sqlStatement = connectMariaDB.createStatement();
-
-            String sql_insert_file = "INSERT IGNORE INTO files(id, name, size, chunksize) VALUES ('"
-                    + generateFileID(inputFileName)
-                    + "', '"
-                    + inputFileName
-                    + "', "
-                    + getFileLength()
-                    + ", "
-                    + dedupChunk.getChunkSize()
-                    + ");";
+        try{
 
             sqlStatement.executeQuery(sql_insert_file);
 
@@ -131,26 +122,24 @@ public class dataFile extends File{
         }
     }
 
-    public void dedupFile() throws Exception{
+    public void dedupFile() throws Exception, IOException, SQLException{
 
         byte[] chunkByte = new byte[dedupChunk.getChunkSize()];
         byte[] lastChunkByte = new byte[(int) getLastChunkSize()];
 
         Connection connectMariaDB = null;
-        Statement sqlStatement = null;
+        PreparedStatement sql_insert_blob = null;
 
         try {
-
             Class.forName(connectionMariaDB.getJDBC_DRIVER());
-
-            connectMariaDB = DriverManager.getConnection( connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(),
-                    connectionMariaDB.getDB_PASSWORD());
+            connectMariaDB = DriverManager.getConnection(connectionMariaDB.getDB_URL(),
+                    connectionMariaDB.getDB_USER(), connectionMariaDB.getDB_PASSWORD());
             connectMariaDB.setAutoCommit(false);
 
-            sqlStatement = connectMariaDB.createStatement();
+            String sql_insert_chunks = "INSERT IGNORE INTO chunks(id, count, content) VALUES( ?, 1, ?)"
+                    + " ON DUPLICATE KEY UPDATE count=count+1;";
 
-            if(! checkIfExistsInDB()) {
+            if (!checkIfExistsInDB()) {
 
                 System.out.print("The file does not exists in the database ... ");
 
@@ -162,101 +151,83 @@ public class dataFile extends File{
 
                 BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName));
 
-                String sql_insert_chunks = "INSERT IGNORE INTO chunks(id, count, content) VALUES( ?, 1, ?)"
-                        + " ON DUPLICATE KEY UPDATE count=count+1;";
-
                 InputStream chunkStream = new FileInputStream(inputFileName);
-                InputStream chunk1 = new FileInputStream(inputFileName);
+                InputStream chunkStream1 = new FileInputStream("reconstructed/" + inputFileName);
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
 
                 long remainingChunks = getNumberOfChunks();
                 long lastChunkSize = getLastChunkSize();
 
-                PreparedStatement sql_insert_blob = null;
+                while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
 
-                while ((remainingChunks > 1 && lastChunkSize > 0) ||
-                        (remainingChunks > 0 && lastChunkSize == 0)) {
-
-                    sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
                     sql_insert_blob.setBinaryStream(2, chunkStream, dedupChunk.getChunkSize());
-
-                    buffer.write(chunkByte, 0, chunk1.read(chunkByte));
-
-                    sql_insert_blob.setString(1, sha256.getSha256(buffer.toString()));
+                    buffer.write(chunkByte, 0, chunkStream1.read(chunkByte));
+                    dedupChunk.setChunkID(DigestUtils.sha256Hex(chunkByte));
+                    sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
-
-                    fileRecipe.write(sha256.getSha256(buffer.toString())+"\n");
+                    fileRecipe.write(dedupChunk.getChunkID() + "\n");
                     remainingChunks -= 1;
                 }
 
                 if (lastChunkSize > 0) {
 
-                    sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
                     sql_insert_blob.setBinaryStream(2, chunkStream, lastChunkSize);
-
-                    buffer.write(lastChunkByte, 0, chunk1.read(lastChunkByte));
-
-                    sql_insert_blob.setString(1, sha256.getSha256(buffer.toString()));
+                    buffer.write(lastChunkByte, 0, chunkStream1.read(lastChunkByte));
+                    dedupChunk.setChunkID(DigestUtils.sha256Hex(lastChunkByte));
+                    sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
-                    fileRecipe.write(sha256.getSha256(buffer.toString()));
+                    fileRecipe.write(dedupChunk.getChunkID());
                 }
 
+                connectMariaDB.commit();
                 fileRecipe.close();
                 insertIntoDB();
                 System.out.println("Successfully added!");
             } else {
-
+                connectMariaDB.rollback();
                 System.out.println("File already in the database!");
             }
 
-        } catch (Exception exception) {
-            exception.printStackTrace();
-            if (connectMariaDB != null) {
-                try {
-                    sqlStatement.close();
-                    connectMariaDB.rollback();
-                    System.err.print("Transaction is being rolled back");
-                } catch (SQLException sqlException) {
-                    sqlException.printStackTrace();
-                }
-            } else { System.out.println("The DB connection was not established!");}
-
-        } finally {
-            if (sqlStatement != null) {
-                try{
-                    sqlStatement.close();
-                    connectMariaDB.setAutoCommit(true);
-                } catch (SQLException sqlException) {
-                    sqlException.printStackTrace();
-                }
-            }
+        } catch (SQLException sqlException1) {
             try {
+                if(connectMariaDB != null)
+                    connectMariaDB.rollback();
+            } catch (SQLException sqlException2) {
+                System.out.println(sqlException2.getMessage());
+            }
+            System.out.println(sqlException1.getMessage());
+
+    } finally {
+            try {
+                if (sql_insert_blob != null) {
+                    sql_insert_blob.close();
+                }
                 if (connectMariaDB != null) {
                     connectMariaDB.close();
                 }
-            } catch (SQLException sqlException) {
-                sqlException.printStackTrace();
+            } catch (SQLException sqlException3) {
+                System.out.println(sqlException3.getMessage());
             }
         }
     }
 
 
-    public void reconstructFile() throws Exception{
+    public void reconstructFile() throws Exception, IOException, SQLException{
 
-        Connection connectMariaDB = null;
-        Statement sqlStatement = null;
+        String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
+                + inputFileName
+                + "';";
 
-        try {
+        Class.forName(connectionMariaDB.getJDBC_DRIVER());
 
-            Class.forName(connectionMariaDB.getJDBC_DRIVER());
+        Connection connectMariaDB = DriverManager.getConnection( connectionMariaDB.getDB_URL(),
+                connectionMariaDB.getDB_USER(),
+                connectionMariaDB.getDB_PASSWORD());
 
-            connectMariaDB = DriverManager.getConnection( connectionMariaDB.getDB_URL(),
-                    connectionMariaDB.getDB_USER(),
-                    connectionMariaDB.getDB_PASSWORD());
-            connectMariaDB.setAutoCommit(false);
+        Statement sqlStatement = connectMariaDB.createStatement();
 
-            sqlStatement = connectMariaDB.createStatement();
-
+        try{
             if(! checkIfExistsInDB()) {
 
                 System.out.println("The requested file does not exists.");
@@ -273,10 +244,6 @@ public class dataFile extends File{
 
                 File newFile = new File("reconstructed/" + inputFileName);
                 FileOutputStream newFileOutputStream = new FileOutputStream(newFile);
-
-                String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
-                        + inputFileName
-                        + "';";
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
@@ -328,34 +295,22 @@ public class dataFile extends File{
                     System.out.println("Error reconstructing the file!");
                 }
             }
-        } catch (Exception exception) {
-            exception.printStackTrace();
-            if (connectMariaDB != null) {
-                try {
-                    sqlStatement.close();
-                    connectMariaDB.rollback();
-                    System.err.print("Transaction is being rolled back");
-                } catch (SQLException se) {
-                    se.printStackTrace();
-                }
-            } else { System.out.println("The DB connection was not established!");}
+        }
+
+        catch (Exception exception) {
+            System.out.println(exception.getMessage());
 
         } finally {
-            if (sqlStatement != null) {
-                try{
-                    sqlStatement.close();
-                    connectMariaDB.setAutoCommit(true);
-                } catch (SQLException sqlException) {
-                    sqlException.printStackTrace();
-                }
-            }
             try {
+                if (sqlStatement != null) {
+                    sqlStatement.close();
+                }
                 if (connectMariaDB != null) {
                     connectMariaDB.close();
                 }
             } catch (SQLException sqlException) {
-                sqlException.printStackTrace();
-            }
+                System.out.println(sqlException.getMessage());
+        }
         }
     }
 }

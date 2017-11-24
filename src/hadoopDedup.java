@@ -26,6 +26,7 @@ public class hadoopDedup {
                     dataFile dedupFile = new dataFile(file.getPath());
                     System.out.println("Dedup");
                     dedupFile.dedupFile();
+
                     System.out.println("Reconstruct");
                     dedupFile.reconstructFile();
                 }
