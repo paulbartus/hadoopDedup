@@ -61,7 +61,7 @@ public class dataFile extends File{
     }
 
 
-    public boolean checkIfExistsInDB() throws Exception, IOException, SQLException {
+    public boolean checkIfExistsInDB() throws Exception {
 
         String sql_check_if_exists_file = "SELECT EXISTS (SELECT id FROM files WHERE "
                 + "name = '"
@@ -85,13 +85,13 @@ public class dataFile extends File{
         }
     }
 
-    public String generateFileID(String inputFileName) throws Exception, IOException {
+    public String generateFileID(String inputFileName) throws Exception {
 
         String fileID = DigestUtils.md5Hex(Files.readAllBytes(Paths.get(inputFileName)));
         return fileID;
     }
 
-    public void insertIntoDB() throws Exception, IOException, SQLException {
+    public void insertIntoDB() throws Exception {
 
         String sql_insert_file = "INSERT IGNORE INTO files(id, name, size, chunksize) VALUES ('"
                 + generateFileID(inputFileName)
@@ -118,7 +118,7 @@ public class dataFile extends File{
         }
     }
 
-    public void dedupFile() throws Exception, IOException, SQLException{
+    public void dedupFile() throws Exception {
 
         byte[] chunkByte = new byte[dedupChunk.getChunkSize()];
         byte[] lastChunkByte = new byte[(int) getLastChunkSize()];
@@ -148,7 +148,8 @@ public class dataFile extends File{
                 BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName));
 
                 InputStream chunkStream = new FileInputStream(inputFileName);
-                InputStream chunkStream1 = new FileInputStream("reconstructed/" + inputFileName);
+                InputStream chunkStreamToHash = new FileInputStream(inputFileName);
+
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
 
@@ -158,7 +159,7 @@ public class dataFile extends File{
                 while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
 
                     sql_insert_blob.setBinaryStream(2, chunkStream, dedupChunk.getChunkSize());
-                    buffer.write(chunkByte, 0, chunkStream1.read(chunkByte));
+                    buffer.write(chunkByte, 0, chunkStreamToHash.read(chunkByte));
                     dedupChunk.setChunkID(DigestUtils.sha256Hex(chunkByte));
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
@@ -169,7 +170,7 @@ public class dataFile extends File{
                 if (lastChunkSize > 0) {
 
                     sql_insert_blob.setBinaryStream(2, chunkStream, lastChunkSize);
-                    buffer.write(lastChunkByte, 0, chunkStream1.read(lastChunkByte));
+                    buffer.write(lastChunkByte, 0, chunkStreamToHash.read(lastChunkByte));
                     dedupChunk.setChunkID(DigestUtils.sha256Hex(lastChunkByte));
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
@@ -194,7 +195,7 @@ public class dataFile extends File{
             }
             System.out.println(sqlException1.getMessage());
 
-    } finally {
+        } finally {
             try {
                 if (sql_insert_blob != null) {
                     sql_insert_blob.close();
@@ -209,7 +210,7 @@ public class dataFile extends File{
     }
 
 
-    public void reconstructFile() throws Exception, IOException, SQLException{
+    public void reconstructFile() throws Exception {
 
         String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                 + inputFileName
@@ -239,6 +240,7 @@ public class dataFile extends File{
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
+
                 BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/"+inputFileName));
 
                 String originalFileID = chunkProperties.getNString("id");
@@ -302,8 +304,7 @@ public class dataFile extends File{
                 }
             } catch (SQLException sqlException) {
                 System.out.println(sqlException.getMessage());
-        }
+            }
         }
     }
 }
-
