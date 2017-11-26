@@ -5,12 +5,12 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
 
-
 public class dataFile extends File{
 
     private String inputFileName;
 
-    chunk dedupChunk = new chunk(512);
+    chunk dedupChunk = new chunk();
+    int chunkSize = dedupChunk.getChunkSize();
 
     connectionMariaDB connectionMariaDB = new connectionMariaDB();
 
@@ -32,24 +32,18 @@ public class dataFile extends File{
 
     public long getLastChunkSize(){
 
-        long lastChunkSize = (int) (getFileLength() % dedupChunk.getChunkSize());
+        long lastChunkSize = (int) (getFileLength() % chunkSize);
         return lastChunkSize;
     }
 
     public long getNumberOfChunks(){
 
-        long numberOfChunks = (int) (getFileLength() / dedupChunk.getChunkSize());
+        long numberOfChunks = (int) (getFileLength() / chunkSize);
         if (getLastChunkSize() > 0){
 
             numberOfChunks += 1;
         }
         return numberOfChunks;
-    }
-
-    // Setters
-    public void setInputFileName(String inputFileName) {
-
-        this.inputFileName = inputFileName;
     }
 
     //Constructors
@@ -100,7 +94,7 @@ public class dataFile extends File{
                 + "', "
                 + getFileLength()
                 + ", "
-                + dedupChunk.getChunkSize()
+                + chunkSize
                 + ");";
 
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
@@ -120,7 +114,7 @@ public class dataFile extends File{
 
     public void dedupFile() throws Exception {
 
-        byte[] chunkByte = new byte[dedupChunk.getChunkSize()];
+        byte[] chunkByte = new byte[chunkSize];
         byte[] lastChunkByte = new byte[(int) getLastChunkSize()];
 
         Connection connectMariaDB = null;
@@ -158,9 +152,11 @@ public class dataFile extends File{
 
                 while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
 
-                    sql_insert_blob.setBinaryStream(2, chunkStream, dedupChunk.getChunkSize());
+                    sql_insert_blob.setBinaryStream(2, chunkStream, chunkSize);
                     buffer.write(chunkByte, 0, chunkStreamToHash.read(chunkByte));
-                    dedupChunk.setChunkID(DigestUtils.sha256Hex(chunkByte));
+                    dedupChunk.generateChunkID(chunkByte);
+
+                    //dedupChunk.setChunkID(DigestUtils.sha256Hex(chunkByte));
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
                     fileRecipe.write(dedupChunk.getChunkID() + "\n");
@@ -171,7 +167,7 @@ public class dataFile extends File{
 
                     sql_insert_blob.setBinaryStream(2, chunkStream, lastChunkSize);
                     buffer.write(lastChunkByte, 0, chunkStreamToHash.read(lastChunkByte));
-                    dedupChunk.setChunkID(DigestUtils.sha256Hex(lastChunkByte));
+                    dedupChunk.generateChunkID(lastChunkByte);
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
                     fileRecipe.write(dedupChunk.getChunkID());

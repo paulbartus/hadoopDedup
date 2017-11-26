@@ -1,7 +1,8 @@
+import org.apache.commons.codec.digest.DigestUtils;
 
 public class chunk {
 
-    private int chunkSize;
+    private int chunkSize = 512;
     private String chunkID;
 
     //Getters
@@ -21,13 +22,14 @@ public class chunk {
         this.chunkSize = chunkSize;
     }
 
-    public void setChunkID(String chunkID){
+    public String generateChunkID(byte[] chunkByte){
 
-        this.chunkID = chunkID;
+        this.chunkID = DigestUtils.sha256Hex(chunkByte);
+        return chunkID;
     }
 
     //Constructors
-    public chunk(int chunkSize) {
+    public chunk() {
 
         this.chunkSize = chunkSize;
     }
