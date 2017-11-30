@@ -123,7 +123,6 @@ public class dataFile extends File{
         try {
 
             connectMariaDB = connectionMariaDB.getDBConnection();
-
             connectMariaDB.setAutoCommit(false);
 
             String sql_insert_chunks = "INSERT IGNORE INTO chunks(id, count, content) VALUES( ?, 1, ?)"
@@ -141,32 +140,31 @@ public class dataFile extends File{
 
                 BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName));
 
-                InputStream chunkStream = new FileInputStream(inputFileName);
-                InputStream chunkStreamToHash = new FileInputStream(inputFileName);
+                InputStream chunkingStream = new FileInputStream(inputFileName);
+                InputStream chunkingStreamToHash = new FileInputStream(inputFileName);
 
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
 
                 long remainingChunks = getNumberOfChunks();
                 long lastChunkSize = getLastChunkSize();
+                System.out.println(lastChunkSize);
 
                 while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
 
-                    sql_insert_blob.setBinaryStream(2, chunkStream, chunkSize);
-                    buffer.write(chunkByte, 0, chunkStreamToHash.read(chunkByte));
+                    sql_insert_blob.setBinaryStream(2, chunkingStream, chunkSize);
+                    buffer.write(chunkByte, 0, chunkingStreamToHash.read(chunkByte));
                     dedupChunk.generateChunkID(chunkByte);
-
-                    //dedupChunk.setChunkID(DigestUtils.sha256Hex(chunkByte));
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
-                    sql_insert_blob.executeUpdate();
+                    sql_insert_blob.executeUpdate();  // 85 - 90 % of running time
                     fileRecipe.write(dedupChunk.getChunkID() + "\n");
                     remainingChunks -= 1;
                 }
 
                 if (lastChunkSize > 0) {
 
-                    sql_insert_blob.setBinaryStream(2, chunkStream, lastChunkSize);
-                    buffer.write(lastChunkByte, 0, chunkStreamToHash.read(lastChunkByte));
+                    sql_insert_blob.setBinaryStream(2, chunkingStream, lastChunkSize);
+                    buffer.write(lastChunkByte, 0, chunkingStreamToHash.read(lastChunkByte));
                     dedupChunk.generateChunkID(lastChunkByte);
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
@@ -177,6 +175,7 @@ public class dataFile extends File{
                 fileRecipe.close();
                 insertIntoDB();
                 System.out.println("Successfully added!");
+
             } else {
                 connectMariaDB.rollback();
                 System.out.println("File already in the database!");
@@ -206,7 +205,9 @@ public class dataFile extends File{
     }
 
 
-    public void reconstructFile() throws Exception {
+    public File reconstructFile() throws Exception {
+
+        File newFile = new File("reconstructed/" + inputFileName);
 
         String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                 + inputFileName
@@ -215,6 +216,8 @@ public class dataFile extends File{
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
 
         Statement sqlStatement = connectMariaDB.createStatement();
+
+        //ResultSet chunkContent;
 
         try{
             if(! checkIfExistsInDB()) {
@@ -231,7 +234,7 @@ public class dataFile extends File{
                     fileDirectoryReconstruct.mkdir();
                 }
 
-                File newFile = new File("reconstructed/" + inputFileName);
+               // File newFile = new File("reconstructed/" + inputFileName);
                 FileOutputStream newFileOutputStream = new FileOutputStream(newFile);
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
@@ -242,41 +245,50 @@ public class dataFile extends File{
                 String originalFileID = chunkProperties.getNString("id");
                 long originalFileSize = chunkProperties.getInt("size");
                 int originalChunkSize = chunkProperties.getInt("chunksize");
-                long lastChunkSize = (int) originalFileSize % originalChunkSize;
+                int lastChunkSize = (int) originalFileSize % originalChunkSize;
                 long totalChunks = (int) originalFileSize / originalChunkSize;
 
                 if (lastChunkSize > 0 ){
                     totalChunks += 1;
                 }
 
-                while (totalChunks > 0) {
+                byte[] chunkByte = new byte[originalChunkSize];
+                byte[] lastChunkByte = new byte[lastChunkSize];
+
+                while ((totalChunks > 1 && lastChunkSize > 0) || (totalChunks > 0 && lastChunkSize == 0)) {
 
                     String sql_read_chunk_content = "SELECT content from chunks where id = '"
                             + fileRecipe.readLine()
                             + "' LIMIT 1;";
                     PreparedStatement statement = connectMariaDB.prepareStatement(sql_read_chunk_content);
-
-                    ResultSet chunkContent = statement.executeQuery();
-
+                    ResultSet chunkContent = statement.executeQuery(); // 85 - 90 % of running time
                     chunkContent.next();
                     InputStream stream = chunkContent.getBinaryStream("content");
-                    byte[] buffer;
-                    if (totalChunks > 1) {
-                        buffer = new byte[originalChunkSize];
-                    } else {
-                        buffer = new byte[(int) lastChunkSize];
-                    }
-                    while (stream.read(buffer) > 0){
-                        newFileOutputStream.write(buffer);
+
+                    while (stream.read(chunkByte) > 0){
+                        newFileOutputStream.write(chunkByte);
                     }
 
                     totalChunks -= 1;
                 }
 
+                if (lastChunkSize > 0) {
+                    String sql_read_chunk_content = "SELECT content from chunks where id = '"
+                            + fileRecipe.readLine()
+                            + "' LIMIT 1;";
+                    PreparedStatement statement = connectMariaDB.prepareStatement(sql_read_chunk_content);
+                    ResultSet chunkContent = statement.executeQuery();
+                    chunkContent.next();
+                    InputStream stream = chunkContent.getBinaryStream("content");
+                    while (stream.read(lastChunkByte) > 0){
+                        newFileOutputStream.write(lastChunkByte);
+                    }
+                }
+
                 newFileOutputStream.close();
                 fileRecipe.close();
 
-                if ( originalFileID.compareTo(generateFileID("reconstructed/"+inputFileName)) == 0) {
+                if ( originalFileID.compareTo(generateFileID(newFile.getCanonicalPath())) == 0) {
 
                     System.out.println("File reconstructed successfully!");
 
@@ -302,5 +314,8 @@ public class dataFile extends File{
                 System.out.println(sqlException.getMessage());
             }
         }
+
+    return newFile;
+
     }
 }

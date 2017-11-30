@@ -23,20 +23,20 @@ public class hadoopDedup {
             for (File file : listOfFiles) {
                 if (file.isFile()) {
                     System.out.println(file.getPath());
-                    dataFile dedupFile = new dataFile(file.getPath());;
+                    dataFile dedupFile = new dataFile(file.getPath());
                     //System.out.println("Dedup");
                     long startDedup = System.currentTimeMillis();
                     dedupFile.dedupFile();
                     long endDedup = System.currentTimeMillis();
-                    long dedupTime= (endDedup - startDedup)/1000;
-                    System.out.println("Dedup time: " + dedupTime + " sec");
+                    long dedupTime= (endDedup - startDedup);
+                    System.out.println("Dedup time: " + dedupTime);
 
                     //System.out.println("Reconstruct");
                     long startReconst = System.currentTimeMillis();
                     dedupFile.reconstructFile();
                     long endReconst = System.currentTimeMillis();
-                    long reconsTime= (endReconst - startReconst)/1000;
-                    System.out.println("Reconstruction time: " + reconsTime + " sec");
+                    long reconsTime= (endReconst - startReconst);
+                    System.out.println("Reconstruction time: " + reconsTime);
                 }
             }
         }

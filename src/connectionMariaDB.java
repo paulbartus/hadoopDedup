@@ -11,16 +11,20 @@ public class connectionMariaDB {
 
     public Connection getDBConnection() throws Exception {
 
-        try { Class.forName(JDBC_DRIVER);
+        try {
+
+            Class.forName(JDBC_DRIVER);
 
         } catch (ClassNotFoundException exception) {
 
             System.out.println(exception.getMessage());
         }
 
-        try { Connection connectMariaDB = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
+        try {
 
+            Connection connectMariaDB = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
             return connectMariaDB;
+
         } catch (SQLException exception) {
 
             System.out.println(exception.getMessage());
