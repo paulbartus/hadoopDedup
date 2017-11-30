@@ -148,7 +148,6 @@ public class dataFile extends File{
 
                 long remainingChunks = getNumberOfChunks();
                 long lastChunkSize = getLastChunkSize();
-                System.out.println(lastChunkSize);
 
                 while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
 
