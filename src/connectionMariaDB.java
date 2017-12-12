@@ -6,8 +6,8 @@ public class connectionMariaDB {
 
     private static final String JDBC_DRIVER = "org.mariadb.jdbc.Driver";
     private static final String DB_URL = "jdbc:mariadb://localhost:3306/ext4";
-    private static final String DB_USER = "root";
-    private static final String DB_PASSWORD = "54h5dynKPf";
+    private static final String DB_USER = "hadoop";
+    private static final String DB_PASSWORD = "dedup2017";
 
     public Connection getDBConnection() throws Exception {
 

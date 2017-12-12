@@ -9,8 +9,7 @@ public class dataFile extends File{
 
     private String inputFileName;
 
-    chunk dedupChunk = new chunk();
-    int chunkSize = dedupChunk.getChunkSize();
+    chunk dedupChunk = new chunk(512);
 
     connectionMariaDB connectionMariaDB = new connectionMariaDB();
 
@@ -30,15 +29,17 @@ public class dataFile extends File{
         return getParent();
     }
 
-    public long getLastChunkSize(){
+    public int getLastChunkSize(){
 
-        long lastChunkSize = (int) (getFileLength() % chunkSize);
+        int lastChunkSize = (int) (getFileLength() % dedupChunk.getChunkSize());
         return lastChunkSize;
     }
 
+    chunk lastChunk = new chunk(getLastChunkSize());
+
     public long getNumberOfChunks(){
 
-        long numberOfChunks = (int) (getFileLength() / chunkSize);
+        long numberOfChunks = (int) (getFileLength() / dedupChunk.getChunkSize());
         if (getLastChunkSize() > 0){
 
             numberOfChunks += 1;
@@ -51,9 +52,7 @@ public class dataFile extends File{
 
         super(inputFileName);
         this.inputFileName = inputFileName;
-        File inputFile = new File(inputFileName);
     }
-
 
     public boolean checkIfExistsInDB() throws Exception {
 
@@ -79,7 +78,7 @@ public class dataFile extends File{
         }
     }
 
-    public String generateFileID(String inputFileName) throws Exception {
+    public String generateFileID() throws Exception {
 
         String fileID = DigestUtils.md5Hex(Files.readAllBytes(Paths.get(inputFileName)));
         return fileID;
@@ -88,13 +87,13 @@ public class dataFile extends File{
     public void insertIntoDB() throws Exception {
 
         String sql_insert_file = "INSERT IGNORE INTO files(id, name, size, chunksize) VALUES ('"
-                + generateFileID(inputFileName)
+                + generateFileID()
                 + "', '"
                 + inputFileName
                 + "', "
                 + getFileLength()
                 + ", "
-                + chunkSize
+                + dedupChunk.getChunkSize()
                 + ");";
 
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
@@ -113,9 +112,6 @@ public class dataFile extends File{
     }
 
     public void dedupFile() throws Exception {
-
-        byte[] chunkByte = new byte[chunkSize];
-        byte[] lastChunkByte = new byte[(int) getLastChunkSize()];
 
         Connection connectMariaDB = null;
         PreparedStatement sql_insert_blob = null;
@@ -151,9 +147,9 @@ public class dataFile extends File{
 
                 while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
 
-                    sql_insert_blob.setBinaryStream(2, chunkingStream, chunkSize);
-                    buffer.write(chunkByte, 0, chunkingStreamToHash.read(chunkByte));
-                    dedupChunk.generateChunkID(chunkByte);
+                    sql_insert_blob.setBinaryStream(2, chunkingStream, dedupChunk.getChunkSize());
+                    buffer.write(dedupChunk.getChunkContent(), 0, chunkingStreamToHash.read(dedupChunk.getChunkContent()));
+                    dedupChunk.setChunkID();
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();  // 85 - 90 % of running time
                     fileRecipe.write(dedupChunk.getChunkID() + "\n");
@@ -163,11 +159,11 @@ public class dataFile extends File{
                 if (lastChunkSize > 0) {
 
                     sql_insert_blob.setBinaryStream(2, chunkingStream, lastChunkSize);
-                    buffer.write(lastChunkByte, 0, chunkingStreamToHash.read(lastChunkByte));
-                    dedupChunk.generateChunkID(lastChunkByte);
-                    sql_insert_blob.setString(1, dedupChunk.getChunkID());
+                    buffer.write(lastChunk.getChunkContent(), 0, chunkingStreamToHash.read(lastChunk.getChunkContent()));
+                    lastChunk.setChunkID();
+                    sql_insert_blob.setString(1, lastChunk.getChunkID());
                     sql_insert_blob.executeUpdate();
-                    fileRecipe.write(dedupChunk.getChunkID());
+                    fileRecipe.write(lastChunk.getChunkID());
                 }
 
                 connectMariaDB.commit();
@@ -204,9 +200,9 @@ public class dataFile extends File{
     }
 
 
-    public File reconstructFile() throws Exception {
+    public dataFile reconstructFile() throws Exception {
 
-        File newFile = new File("reconstructed/" + inputFileName);
+        dataFile reconstructedFile = new dataFile("reconstructed/" + inputFileName);
 
         String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                 + inputFileName
@@ -215,8 +211,6 @@ public class dataFile extends File{
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
 
         Statement sqlStatement = connectMariaDB.createStatement();
-
-        //ResultSet chunkContent;
 
         try{
             if(! checkIfExistsInDB()) {
@@ -233,8 +227,7 @@ public class dataFile extends File{
                     fileDirectoryReconstruct.mkdir();
                 }
 
-               // File newFile = new File("reconstructed/" + inputFileName);
-                FileOutputStream newFileOutputStream = new FileOutputStream(newFile);
+                FileOutputStream newFileOutputStream = new FileOutputStream(reconstructedFile);
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
@@ -287,7 +280,7 @@ public class dataFile extends File{
                 newFileOutputStream.close();
                 fileRecipe.close();
 
-                if ( originalFileID.compareTo(generateFileID(newFile.getCanonicalPath())) == 0) {
+                if ( originalFileID.compareTo(reconstructedFile.generateFileID()) == 0) {
 
                     System.out.println("File reconstructed successfully!");
 
@@ -314,7 +307,7 @@ public class dataFile extends File{
             }
         }
 
-    return newFile;
+    return reconstructedFile;
 
     }
 }

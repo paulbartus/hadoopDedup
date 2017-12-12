@@ -1,7 +1,5 @@
 import org.junit.Test;
 
-import java.io.File;
-
 import static org.junit.Assert.*;
 
 public class dataFileTest {
@@ -11,12 +9,18 @@ public class dataFileTest {
     dataFile dedupFile3 = new dataFile("data/file9.pdf");
     dataFile dedupFile4 = new dataFile("data/file9.txt");
 
+
     @Test
     public void getInputFileName() throws Exception {
 
         assertEquals("data/file1.png", dedupFile1.getInputFileName());
         assertEquals("data/file8.mp4", dedupFile2.getInputFileName());
         assertEquals("data/file9.pdf", dedupFile3.getInputFileName());
+
+        assertEquals("reconstructed/data/file1.png", dedupFile1.reconstructFile().getInputFileName());
+        assertEquals("reconstructed/data/file8.mp4", dedupFile2.reconstructFile().getInputFileName());
+        assertEquals("reconstructed/data/file9.pdf", dedupFile3.reconstructFile().getInputFileName());
+
     }
 
     @Test
@@ -70,14 +74,9 @@ public class dataFileTest {
     @Test
     public void generateFileID() throws Exception {
 
-        assertEquals( "bfd9c1af13ec84176b2556ff76e3eb0d",
-                dedupFile1.generateFileID(dedupFile1.getInputFileName()));
-
-        assertEquals( "1707920ce89b69091fb1da02ec86d3e2",
-                dedupFile2.generateFileID(dedupFile2.getInputFileName()));
-
-        assertEquals( "139685fcf4cbdd0efa8761a96189f14b",
-                dedupFile3.generateFileID(dedupFile3.getInputFileName()));
+        assertEquals( "bfd9c1af13ec84176b2556ff76e3eb0d", dedupFile1.generateFileID());
+        assertEquals( "1707920ce89b69091fb1da02ec86d3e2", dedupFile2.generateFileID());
+        assertEquals( "139685fcf4cbdd0efa8761a96189f14b", dedupFile3.generateFileID());
     }
 
     @Test
@@ -94,21 +93,19 @@ public class dataFileTest {
     @Test
     public void reconstructFile() throws Exception {
 
-        File recFile1 = dedupFile1.reconstructFile();
-        File recFile2 = dedupFile2.reconstructFile();
-        File recFile3 = dedupFile3.reconstructFile();
+        dataFile reconstructedFile1 = dedupFile1.reconstructFile();
+        dataFile reconstructedFile2 = dedupFile2.reconstructFile();
+        dataFile reconstructedFile3 = dedupFile3.reconstructFile();
 
-        assertEquals(recFile1.length(),dedupFile1.getFileLength());
-        assertEquals(recFile2.length(),dedupFile2.getFileLength());
-        assertEquals(recFile3.length(),dedupFile3.getFileLength());
+        assertEquals(reconstructedFile1.getFileLength(), dedupFile1.getFileLength());
+        assertEquals(reconstructedFile2.getFileLength(), dedupFile2.getFileLength());
+        assertEquals(reconstructedFile3.getFileLength(), dedupFile3.getFileLength());
 
-        assertEquals(dedupFile1.generateFileID(dedupFile1.getInputFileName()),
-                dedupFile1.generateFileID(recFile1.getCanonicalPath()));
+        assertEquals(reconstructedFile1.generateFileID(), dedupFile1.generateFileID());
+        assertEquals(reconstructedFile2.generateFileID(), dedupFile2.generateFileID());
+        assertEquals(reconstructedFile3.generateFileID(), dedupFile3.generateFileID());
 
-        assertEquals(dedupFile2.generateFileID(dedupFile2.getInputFileName()),
-                dedupFile2.generateFileID(recFile2.getCanonicalPath()));
 
-        assertEquals(dedupFile3.generateFileID(dedupFile3.getInputFileName()),
-                dedupFile3.generateFileID(recFile3.getCanonicalPath()));
+
     }
 }
