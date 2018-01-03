@@ -1,7 +1,7 @@
 import org.apache.commons.codec.digest.DigestUtils;
 
 
-public class chunk {
+public class dedupChunk {
 
     private String chunkID;
     private byte[] chunkContent;
@@ -30,7 +30,7 @@ public class chunk {
     }
 
     //Constructors
-    public chunk(int chunkSize) {
+    public dedupChunk(int chunkSize) {
 
         this.chunkSize = chunkSize;
         this.chunkContent = new byte[chunkSize];

@@ -23,7 +23,7 @@ public class hadoopDedup {
             for (File file : listOfFiles) {
                 if (file.isFile()) {
                     System.out.println(file.getPath());
-                    dataFile dedupFile = new dataFile(file.getPath());
+                    dedupFile dedupFile = new dedupFile(file.getPath());
                     //System.out.println("Dedup");
                     long startDedup = System.currentTimeMillis();
                     dedupFile.dedupFile();

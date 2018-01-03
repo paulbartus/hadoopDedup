@@ -2,12 +2,12 @@ import org.junit.Test;
 
 import static org.junit.Assert.*;
 
-public class dataFileTest {
+public class dedupFileTest {
 
-    dataFile dedupFile1 = new dataFile("data/file1.png");
-    dataFile dedupFile2 = new dataFile("data/file8.mp4");
-    dataFile dedupFile3 = new dataFile("data/file9.pdf");
-    dataFile dedupFile4 = new dataFile("data/file9.txt");
+    dedupFile dedupFile1 = new dedupFile("data/file1.png");
+    dedupFile dedupFile2 = new dedupFile("data/file8.mp4");
+    dedupFile dedupFile3 = new dedupFile("data/file9.pdf");
+    dedupFile dedupFile4 = new dedupFile("data/file9.txt");
 
 
     @Test
@@ -93,9 +93,9 @@ public class dataFileTest {
     @Test
     public void reconstructFile() throws Exception {
 
-        dataFile reconstructedFile1 = dedupFile1.reconstructFile();
-        dataFile reconstructedFile2 = dedupFile2.reconstructFile();
-        dataFile reconstructedFile3 = dedupFile3.reconstructFile();
+        dedupFile reconstructedFile1 = dedupFile1.reconstructFile();
+        dedupFile reconstructedFile2 = dedupFile2.reconstructFile();
+        dedupFile reconstructedFile3 = dedupFile3.reconstructFile();
 
         assertEquals(reconstructedFile1.getFileLength(), dedupFile1.getFileLength());
         assertEquals(reconstructedFile2.getFileLength(), dedupFile2.getFileLength());

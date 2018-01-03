@@ -5,11 +5,11 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
 
-public class dataFile extends File{
+public class dedupFile extends File{
 
     private String inputFileName;
 
-    chunk dedupChunk = new chunk(512);
+    dedupChunk dedupChunk = new dedupChunk(512);
 
     connectionMariaDB connectionMariaDB = new connectionMariaDB();
 
@@ -35,7 +35,7 @@ public class dataFile extends File{
         return lastChunkSize;
     }
 
-    chunk lastChunk = new chunk(getLastChunkSize());
+    dedupChunk lastChunk = new dedupChunk(getLastChunkSize());
 
     public long getNumberOfChunks(){
 
@@ -48,7 +48,7 @@ public class dataFile extends File{
     }
 
     //Constructors
-    public dataFile(String inputFileName) {
+    public dedupFile(String inputFileName) {
 
         super(inputFileName);
         this.inputFileName = inputFileName;
@@ -200,9 +200,9 @@ public class dataFile extends File{
     }
 
 
-    public dataFile reconstructFile() throws Exception {
+    public dedupFile reconstructFile() throws Exception {
 
-        dataFile reconstructedFile = new dataFile("reconstructed/" + inputFileName);
+        dedupFile reconstructedFile = new dedupFile("reconstructed/" + inputFileName);
 
         String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                 + inputFileName
