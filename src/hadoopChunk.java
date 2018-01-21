@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
 
-public class dedupFile extends File{
+public class hadoopChunk extends File{
 
     private String inputFileName;
 
@@ -48,7 +48,7 @@ public class dedupFile extends File{
     }
 
     //Constructors
-    public dedupFile(String inputFileName) {
+    public hadoopChunk(String inputFileName) {
 
         super(inputFileName);
         this.inputFileName = inputFileName;
@@ -111,7 +111,7 @@ public class dedupFile extends File{
         }
     }
 
-    public void dedupFile() throws Exception {
+    public void dedupHadoopChunk() throws Exception {
 
         Connection connectMariaDB = null;
         PreparedStatement sql_insert_blob = null;
@@ -134,7 +134,7 @@ public class dedupFile extends File{
                     fileDirectoryDedup.mkdir();
                 }
 
-                BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName));
+                BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName + ".fr"));
 
                 InputStream chunkingStream = new FileInputStream(inputFileName);
                 InputStream chunkingStreamToHash = new FileInputStream(inputFileName);
@@ -200,9 +200,9 @@ public class dedupFile extends File{
     }
 
 
-    public dedupFile reconstructFile() throws Exception {
+    public hadoopChunk reconstructHadoopChunk() throws Exception {
 
-        dedupFile reconstructedFile = new dedupFile("reconstructed/" + inputFileName);
+        hadoopChunk reconstructedHadoopChunk = new hadoopChunk("reconstructed/" + inputFileName);
 
         String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                 + inputFileName
@@ -227,12 +227,12 @@ public class dedupFile extends File{
                     fileDirectoryReconstruct.mkdir();
                 }
 
-                FileOutputStream newFileOutputStream = new FileOutputStream(reconstructedFile);
+                FileOutputStream newFileOutputStream = new FileOutputStream(reconstructedHadoopChunk);
 
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
 
-                BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/"+inputFileName));
+                BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/" + inputFileName + ".fr"));
 
                 String originalFileID = chunkProperties.getNString("id");
                 long originalFileSize = chunkProperties.getInt("size");
@@ -280,7 +280,7 @@ public class dedupFile extends File{
                 newFileOutputStream.close();
                 fileRecipe.close();
 
-                if ( originalFileID.compareTo(reconstructedFile.generateFileID()) == 0) {
+                if ( originalFileID.compareTo(reconstructedHadoopChunk.generateFileID()) == 0) {
 
                     System.out.println("File reconstructed successfully!");
 
@@ -307,7 +307,7 @@ public class dedupFile extends File{
             }
         }
 
-    return reconstructedFile;
+    return reconstructedHadoopChunk;
 
     }
 }
