@@ -9,7 +9,7 @@ public class dedupFile extends File{
 
     private String inputFileName;
 
-    dedupChunk dedupChunk = new dedupChunk(512);
+    dedupChunk dedupChunk = new dedupChunk(512,false);
 
     connectionMariaDB connectionMariaDB = new connectionMariaDB();
 
@@ -35,7 +35,7 @@ public class dedupFile extends File{
         return lastChunkSize;
     }
 
-    dedupChunk lastChunk = new dedupChunk(getLastChunkSize());
+    dedupChunk lastChunk = new dedupChunk(getLastChunkSize(),true);
 
     public long getNumberOfChunks(){
 
