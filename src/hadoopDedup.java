@@ -1,49 +1,54 @@
 import java.io.File;
-import java.util.Scanner;
 
 public class hadoopDedup {
 
+
     public static void main(String[] args) throws Exception {
 
-        Scanner userInputReader = new Scanner(System.in);
-        System.out.print("Please enter directory to dedup: ");
-        String inputDirectory = userInputReader.next();
-        userInputReader.close();
-        recursiveDedup(inputDirectory);
+
+        //Scanner userInputReader = new Scanner(System.in);
+        //System.out.print("Please enter directory to dedup: ");
+        //String inputDirectory = userInputReader.next();
+        //userInputReader.close();
+
+        String hadoopChunksFinalizedDirectory = "datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized";
+        recursiveDedup(hadoopChunksFinalizedDirectory);
     }
 
-    public static void recursiveDedup(String inputDirectory) throws Exception{
+    public static void recursiveDedup(String hadoopChunksDirectory) throws Exception{
 
-        File dataDirectory = new File(inputDirectory);
+        File hadoopChunksDir = new File(hadoopChunksDirectory);
 
-        if (!dataDirectory.exists()) {
+        if (!hadoopChunksDir.exists()) {
 
-            System.out.println("The directory " + inputDirectory + "/ does not exists.");
+            System.out.println("The directory " + hadoopChunksDir + "/ does not exists.");
 
         } else {
 
-            File[] chunks = dataDirectory.listFiles();
+            File[] hadoopChunks = hadoopChunksDir.listFiles();
 
-            for (File chunk : chunks) {
+            for (File hadoopChunkFileOrDir : hadoopChunks) {
 
-                if (chunk.isDirectory() && !chunk.isHidden()) {
+                if (hadoopChunkFileOrDir.isDirectory() && !hadoopChunkFileOrDir.isHidden()) {
 
-                    System.out.println("All the files from " + chunk + "/ will be deduplicated.");
-                    recursiveDedup(chunk.getPath());
+                    System.out.println("All the files from " + hadoopChunkFileOrDir + "/ will be deduplicated.");
+                    recursiveDedup(hadoopChunkFileOrDir.getPath());
 
-                } else if (chunk.isFile() && !chunk.isHidden()) {
+                } else if (hadoopChunkFileOrDir.isFile() && !hadoopChunkFileOrDir.isHidden()
+                                                         && !hadoopChunkFileOrDir.getName().endsWith(".meta")) {
 
-                    System.out.println(chunk.getPath());
-                    hadoopChunk hadoopChunk1 = new hadoopChunk(chunk.getPath());
+                    System.out.println(hadoopChunkFileOrDir.getPath());
+                    hadoopChunk theChunk = new hadoopChunk(hadoopChunkFileOrDir.getPath());
                     //System.out.println("Dedup");
                     long startDedup = System.currentTimeMillis();
-                    hadoopChunk1.dedupHadoopChunk();
+                    theChunk.dedupHadoopChunk();
+                    //hadoopChunkFileOrDir.delete();
                     long endDedup = System.currentTimeMillis();
                     long dedupTime = (endDedup - startDedup);
                     System.out.println("Dedup time: " + dedupTime);
                     //System.out.println("Reconstruct");
                     long startReconst = System.currentTimeMillis();
-                    hadoopChunk1.reconstructHadoopChunk();
+                    theChunk.reconstructHadoopChunk();
                     long endReconst = System.currentTimeMillis();
                     long reconsTime= (endReconst - startReconst);
                     System.out.println("Reconstruction time: " + reconsTime);
