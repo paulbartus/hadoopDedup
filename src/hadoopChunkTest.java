@@ -32,13 +32,13 @@ public class hadoopChunkTest {
                 "subdir0/subdir0/blk_1073741825", hadoopChunk5.getInputFileName());
 
 
-        assertEquals("reconstructed/datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+        assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
                 "subdir0/subdir0/blk_1073741987", hadoopChunk1.reconstructHadoopChunk().getInputFileName());
-        assertEquals("reconstructed/datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+        assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
                 "subdir0/subdir0/blk_1073741988", hadoopChunk2.reconstructHadoopChunk().getInputFileName());
-        assertEquals("reconstructed/datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+        assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
                 "subdir0/subdir0/blk_1073741989", hadoopChunk3.reconstructHadoopChunk().getInputFileName());
-        assertEquals("reconstructed/datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+        assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
                 "subdir0/subdir0/blk_1073741825", hadoopChunk5.reconstructHadoopChunk().getInputFileName());
     }
 

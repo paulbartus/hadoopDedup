@@ -2,56 +2,48 @@ import java.io.File;
 
 public class hadoopDedup {
 
-
     public static void main(String[] args) throws Exception {
 
-
-        //Scanner userInputReader = new Scanner(System.in);
-        //System.out.print("Please enter directory to dedup: ");
-        //String inputDirectory = userInputReader.next();
-        //userInputReader.close();
-
         String hadoopChunksFinalizedDirectory = "datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized";
-        recursiveDedup(hadoopChunksFinalizedDirectory);
+        recursiveDedupFinalizedDirectory(hadoopChunksFinalizedDirectory);
     }
 
-    public static void recursiveDedup(String hadoopChunksDirectory) throws Exception{
+    public static void recursiveDedupFinalizedDirectory(String hadoopChunksDirectory) throws Exception{
 
-        File hadoopChunksDir = new File(hadoopChunksDirectory);
+        File hadoopChunksFinalizedDirectoryContent = new File(hadoopChunksDirectory);
 
-        if (!hadoopChunksDir.exists()) {
+        if (!hadoopChunksFinalizedDirectoryContent.exists()) {
 
-            System.out.println("The directory " + hadoopChunksDir + "/ does not exists.");
+            System.out.println("The directory " + hadoopChunksFinalizedDirectoryContent + " does not exists.");
 
         } else {
 
-            File[] hadoopChunks = hadoopChunksDir.listFiles();
+            File[] hadoopChunksDirectoryContent = hadoopChunksFinalizedDirectoryContent.listFiles();
 
-            for (File hadoopChunkFileOrDir : hadoopChunks) {
+            for (File hadoopChunkDirectoryItem : hadoopChunksDirectoryContent) {
 
-                if (hadoopChunkFileOrDir.isDirectory() && !hadoopChunkFileOrDir.isHidden()) {
+                if (hadoopChunkDirectoryItem.isDirectory() && !hadoopChunkDirectoryItem.isHidden()) {
 
-                    System.out.println("All the files from " + hadoopChunkFileOrDir + "/ will be deduplicated.");
-                    recursiveDedup(hadoopChunkFileOrDir.getPath());
+                    System.out.println("All the files from " + hadoopChunkDirectoryItem + " will be deduplicated.");
+                    recursiveDedupFinalizedDirectory(hadoopChunkDirectoryItem.getPath());
 
-                } else if (hadoopChunkFileOrDir.isFile() && !hadoopChunkFileOrDir.isHidden()
-                                                         && !hadoopChunkFileOrDir.getName().endsWith(".meta")) {
+                } else if (hadoopChunkDirectoryItem.isFile() && !hadoopChunkDirectoryItem.isHidden()
+                                                         && !hadoopChunkDirectoryItem.getName().endsWith(".meta")
+                                                         && !hadoopChunkDirectoryItem.getName().endsWith(".fr")) {
 
-                    System.out.println(hadoopChunkFileOrDir.getPath());
-                    hadoopChunk theChunk = new hadoopChunk(hadoopChunkFileOrDir.getPath());
-                    //System.out.println("Dedup");
-                    long startDedup = System.currentTimeMillis();
+                    System.out.println(hadoopChunkDirectoryItem.getPath());
+                    hadoopChunk theChunk = new hadoopChunk(hadoopChunkDirectoryItem.getPath());
+                    //long startDedup = System.currentTimeMillis();
                     theChunk.dedupHadoopChunk();
-                    //hadoopChunkFileOrDir.delete();
-                    long endDedup = System.currentTimeMillis();
-                    long dedupTime = (endDedup - startDedup);
-                    System.out.println("Dedup time: " + dedupTime);
-                    //System.out.println("Reconstruct");
-                    long startReconst = System.currentTimeMillis();
+                    hadoopChunkDirectoryItem.delete();
+                    //long endDedup = System.currentTimeMillis();
+                    //long dedupTime = (endDedup - startDedup);
+                    //System.out.println("Dedup time: " + dedupTime);
+                    //long startReconst = System.currentTimeMillis();
                     theChunk.reconstructHadoopChunk();
-                    long endReconst = System.currentTimeMillis();
-                    long reconsTime= (endReconst - startReconst);
-                    System.out.println("Reconstruction time: " + reconsTime);
+                    //long endReconst = System.currentTimeMillis();
+                    //long reconsTime= (endReconst - startReconst);
+                    //System.out.println("Reconstruction time: " + reconsTime);
                 }
             }
         }

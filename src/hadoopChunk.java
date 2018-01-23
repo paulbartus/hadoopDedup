@@ -128,13 +128,15 @@ public class hadoopChunk extends File{
 
                 System.out.print("The file does not exists in the database ... ");
 
-                File fileDirectoryDedup = new File("dataset/" + getFileParent());
+                //File fileDirectoryDedup = new File("filerecipes/" + getFileParent());
+                File fileDirectoryDedup = new File(getFileParent());
                 if (!fileDirectoryDedup.exists()) {
 
                     fileDirectoryDedup.mkdirs();
                 }
 
-                BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("dataset/" + inputFileName ));
+                //BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("filerecipes/" + inputFileName ));
+                BufferedWriter fileRecipe = new BufferedWriter(new FileWriter(inputFileName + ".fr" ));
 
                 InputStream chunkingStream = new FileInputStream(inputFileName);
                 InputStream chunkingStreamToHash = new FileInputStream(inputFileName);
@@ -202,7 +204,8 @@ public class hadoopChunk extends File{
 
     public hadoopChunk reconstructHadoopChunk() throws Exception {
 
-        hadoopChunk reconstructedHadoopChunk = new hadoopChunk("reconstructed/" + inputFileName);
+        //hadoopChunk reconstructedHadoopChunk = new hadoopChunk("reconstructed/" + inputFileName);
+        hadoopChunk reconstructedHadoopChunk = new hadoopChunk(inputFileName);
 
         String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
                 + inputFileName
@@ -221,7 +224,9 @@ public class hadoopChunk extends File{
 
                 System.out.print("Reconstructing ... ");
 
-                File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent());
+                //File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent());
+                File fileDirectoryReconstruct = new File(getFileParent());
+
                 if (!fileDirectoryReconstruct.exists()) {
 
                     fileDirectoryReconstruct.mkdirs();
@@ -232,7 +237,8 @@ public class hadoopChunk extends File{
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
 
-                BufferedReader fileRecipe = new BufferedReader(new FileReader("dataset/" + inputFileName));
+                //BufferedReader fileRecipe = new BufferedReader(new FileReader("filerecipes/" + inputFileName));
+                BufferedReader fileRecipe = new BufferedReader(new FileReader(inputFileName + ".fr"));
 
                 String originalFileID = chunkProperties.getNString("id");
                 long originalFileSize = chunkProperties.getInt("size");
