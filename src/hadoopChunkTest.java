@@ -4,15 +4,15 @@ import static org.junit.Assert.*;
 
 public class hadoopChunkTest {
 
-    hadoopChunk hadoopChunk1 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+    hadoopChunkWithDedup hadoopChunk1 = new hadoopChunkWithDedup("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
             "subdir0/subdir0/blk_1073741987");
-    hadoopChunk hadoopChunk2 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+    hadoopChunkWithDedup hadoopChunk2 = new hadoopChunkWithDedup("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
             "subdir0/subdir0/blk_1073741988");
-    hadoopChunk hadoopChunk3 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+    hadoopChunkWithDedup hadoopChunk3 = new hadoopChunkWithDedup("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
             "subdir0/subdir0/blk_1073741989");
-    hadoopChunk hadoopChunk4 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+    hadoopChunkWithDedup hadoopChunk4 = new hadoopChunkWithDedup("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
             "subdir0/subdir0/blk_1073741990");
-    hadoopChunk hadoopChunk5 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
+    hadoopChunkWithDedup hadoopChunk5 = new hadoopChunkWithDedup("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
             "subdir0/subdir0/blk_1073741825");
 
 

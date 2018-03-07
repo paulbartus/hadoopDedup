@@ -7,7 +7,7 @@ import java.sql.*;
 
 public class hadoopChunk extends File{
 
-    private String inputFileName;
+    protected String inputFileName;
 
     dedupChunk dedupChunk = new dedupChunk(512,false);
 
