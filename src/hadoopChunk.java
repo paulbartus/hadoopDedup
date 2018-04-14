@@ -143,31 +143,18 @@ public class hadoopChunk extends File{
 
                 ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
-
-                long remainingChunks = getNumberOfChunks();
-                long lastChunkSize = getLastChunkSize();
-
-                while ((remainingChunks > 1 && lastChunkSize > 0) || (remainingChunks > 0 && lastChunkSize == 0)) {
-
-                    sql_insert_blob.setBinaryStream(2, chunkingStream, dedupChunk.getChunkSize());
+                int chunkSize = dedupChunk.getChunkSize();
+                long bytesToChunk = getFileLength();
+                while (bytesToChunk>0) {
+                    int bytesToChunkNext = (chunkSize < bytesToChunk) ? chunkSize : (int) bytesToChunk;
+                    sql_insert_blob.setBinaryStream(2, chunkingStream, bytesToChunkNext);
                     buffer.write(dedupChunk.getChunkContent(), 0, chunkingStreamToHash.read(dedupChunk.getChunkContent()));
                     dedupChunk.setChunkID();
                     sql_insert_blob.setString(1, dedupChunk.getChunkID());
                     sql_insert_blob.executeUpdate();  // 85 - 90 % of running time
                     fileRecipe.write(dedupChunk.getChunkID() + "\n");
-                    remainingChunks -= 1;
+                    bytesToChunk -= bytesToChunkNext;
                 }
-
-                if (lastChunkSize > 0) {
-
-                    sql_insert_blob.setBinaryStream(2, chunkingStream, lastChunkSize);
-                    buffer.write(lastChunk.getChunkContent(), 0, chunkingStreamToHash.read(lastChunk.getChunkContent()));
-                    lastChunk.setChunkID();
-                    sql_insert_blob.setString(1, lastChunk.getChunkID());
-                    sql_insert_blob.executeUpdate();
-                    fileRecipe.write(lastChunk.getChunkID());
-                }
-
                 connectMariaDB.commit();
                 fileRecipe.close();
                 insertIntoDB();
