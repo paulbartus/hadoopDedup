@@ -53,6 +53,14 @@ public class hadoopChunkTest {
     }
 
     @Test
+    public void computeFileLength() throws Exception {
+        assertEquals(1048576, hadoopChunk1.computeFileLength());
+        assertEquals(1048576, hadoopChunk2.computeFileLength());
+        assertEquals(1048576, hadoopChunk3.computeFileLength());
+        assertEquals(1048576, hadoopChunk5.computeFileLength());
+    }
+
+    @Test
     public void getFileParent() throws Exception {
 
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/subdir0/subdir0",
@@ -80,7 +88,7 @@ public class hadoopChunkTest {
         assertTrue(hadoopChunk1.checkIfExistsInDB());
         assertTrue(hadoopChunk2.checkIfExistsInDB());
         assertTrue(hadoopChunk3.checkIfExistsInDB());
-        assertFalse(hadoopChunk4.checkIfExistsInDB());
+        assertTrue(hadoopChunk4.checkIfExistsInDB());
         assertTrue(hadoopChunk5.checkIfExistsInDB());
     }
 

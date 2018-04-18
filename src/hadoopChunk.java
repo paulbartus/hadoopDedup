@@ -67,6 +67,31 @@ public class hadoopChunk extends File{
         return fileID;
     }
 
+    public long computeFileLength() throws Exception {
+            Connection connectMariaDB = connectionMariaDB.getDBConnection();
+            Statement sqlStatement = connectMariaDB.createStatement();
+            InputStream in = new FileInputStream(new File(inputFileName + ".fr"));
+            long fileLength = 0;
+            int numBytes;
+            byte buf[] = new byte[64];
+            int bytesRead = in.read(buf);
+            String chunkId = new String(buf);
+            while (bytesRead > 0) {
+                String sql_read_chunk_numBytes = "SELECT numBytes from chunk where chunkId = '"
+                        + chunkId
+                        + "' LIMIT 1;";
+                ResultSet storedChunkSize = sqlStatement.executeQuery(sql_read_chunk_numBytes);
+                storedChunkSize.next();
+                numBytes = storedChunkSize.getInt("numBytes");
+                fileLength += numBytes;
+                bytesRead = in.read(buf);
+                chunkId = new String(buf);
+            }
+            in.close();
+            connectionMariaDB.closeDBConnection(connectMariaDB);
+            return fileLength;
+    }
+
     public void insertIntoDB() throws Exception {
         String sql_insert_file = "INSERT IGNORE INTO file(fileId, fileName, fileSize) VALUES ('"
                 + generateFileID()
