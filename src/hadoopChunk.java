@@ -6,42 +6,31 @@ import java.nio.file.Paths;
 import java.sql.*;
 
 public class hadoopChunk extends File{
-
     protected String inputFileName;
-
-    dedupChunk dedupChunk = new dedupChunk(512,false);
-
+    dedupChunk dedupChunk = new dedupChunk(512);
     connectionMariaDB connectionMariaDB = new connectionMariaDB();
 
     //Getters
     public String getInputFileName(){
-
         return inputFileName;
     }
 
     public long getFileLength(){
-
         return length();
     }
 
     public String getFileParent(){
-
         return getParent();
     }
 
     public int getLastChunkSize(){
-
         int lastChunkSize = (int) (getFileLength() % dedupChunk.getChunkSize());
         return lastChunkSize;
     }
 
-    dedupChunk lastChunk = new dedupChunk(getLastChunkSize(),true);
-
     public long getNumberOfChunks(){
-
         long numberOfChunks = (int) (getFileLength() / dedupChunk.getChunkSize());
         if (getLastChunkSize() > 0){
-
             numberOfChunks += 1;
         }
         return numberOfChunks;
@@ -49,24 +38,19 @@ public class hadoopChunk extends File{
 
     //Constructors
     public hadoopChunk(String inputFileName) {
-
         super(inputFileName);
         this.inputFileName = inputFileName;
     }
 
     public boolean checkIfExistsInDB() throws Exception {
-
-        String sql_check_if_exists_file = "SELECT EXISTS (SELECT id FROM files WHERE "
-                + "name = '"
+        String sql_check_if_exists_file = "SELECT EXISTS (SELECT fileId FROM file WHERE "
+                + "fileName = '"
                 + inputFileName
                 + "')";
 
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
-
         Statement sqlStatement = connectMariaDB.createStatement();
-
         try{
-
             ResultSet fileExists = sqlStatement.executeQuery(sql_check_if_exists_file);
             fileExists.next();
             boolean exists = fileExists.getBoolean(1);
@@ -79,81 +63,63 @@ public class hadoopChunk extends File{
     }
 
     public String generateFileID() throws Exception {
-
         String fileID = DigestUtils.md5Hex(Files.readAllBytes(Paths.get(inputFileName)));
         return fileID;
     }
 
     public void insertIntoDB() throws Exception {
-
-        String sql_insert_file = "INSERT IGNORE INTO files(id, name, size, chunksize) VALUES ('"
+        String sql_insert_file = "INSERT IGNORE INTO file(fileId, fileName, fileSize) VALUES ('"
                 + generateFileID()
                 + "', '"
                 + inputFileName
                 + "', "
                 + getFileLength()
-                + ", "
-                + dedupChunk.getChunkSize()
                 + ");";
-
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
-
         Statement sqlStatement = connectMariaDB.createStatement();
-
         try{
-
             sqlStatement.executeQuery(sql_insert_file);
-
         } finally {
-
             connectionMariaDB.closeDBConnection(connectMariaDB);
             sqlStatement.close();
         }
     }
 
     public void dedupHadoopChunk() throws Exception {
-
         Connection connectMariaDB = null;
         PreparedStatement sql_insert_blob = null;
-
         try {
-
             connectMariaDB = connectionMariaDB.getDBConnection();
             connectMariaDB.setAutoCommit(false);
-
-            String sql_insert_chunks = "INSERT IGNORE INTO chunks(id, count, content) VALUES( ?, 1, ?)"
+            String sql_insert_chunk_content = "INSERT IGNORE INTO chunk(chunkId, numBytes, count, content) VALUES( ?, ?, 1, ?)"
                     + " ON DUPLICATE KEY UPDATE count=count+1;";
-
             if (!checkIfExistsInDB()) {
-
                 System.out.print("The file does not exists in the database ... ");
-
-                //File fileDirectoryDedup = new File("filerecipes/" + getFileParent());
                 File fileDirectoryDedup = new File(getFileParent());
                 if (!fileDirectoryDedup.exists()) {
-
                     fileDirectoryDedup.mkdirs();
                 }
-
-                //BufferedWriter fileRecipe = new BufferedWriter(new FileWriter("filerecipes/" + inputFileName ));
                 BufferedWriter fileRecipe = new BufferedWriter(new FileWriter(inputFileName + ".fr" ));
-
-                InputStream chunkingStream = new FileInputStream(inputFileName);
-                InputStream chunkingStreamToHash = new FileInputStream(inputFileName);
-
-                ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-                sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunks);
+                InputStream in = new FileInputStream(inputFileName);
+                InputStream inToHash = new FileInputStream(inputFileName);
+                //ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+                sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunk_content);
                 int chunkSize = dedupChunk.getChunkSize();
-                long bytesToChunk = getFileLength();
-                while (bytesToChunk>0) {
+                byte chunk[] = new byte[chunkSize];
+                byte chunkToHash[] = new byte[chunkSize];
+                int bytesToChunk = in.read(chunk);
+                inToHash.read(chunkToHash);
+                while (bytesToChunk > 0) {
                     int bytesToChunkNext = (chunkSize < bytesToChunk) ? chunkSize : (int) bytesToChunk;
-                    sql_insert_blob.setBinaryStream(2, chunkingStream, bytesToChunkNext);
-                    buffer.write(dedupChunk.getChunkContent(), 0, chunkingStreamToHash.read(dedupChunk.getChunkContent()));
-                    dedupChunk.setChunkID();
-                    sql_insert_blob.setString(1, dedupChunk.getChunkID());
-                    sql_insert_blob.executeUpdate();  // 85 - 90 % of running time
-                    fileRecipe.write(dedupChunk.getChunkID() + "\n");
-                    bytesToChunk -= bytesToChunkNext;
+                    String chunkIdString = DigestUtils.sha256Hex(chunkToHash);   // compute sha256 for the current chunk content
+                    sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunk_content);
+                    sql_insert_blob.setString(1, chunkIdString);
+                    sql_insert_blob.setInt(2, bytesToChunkNext);
+                    sql_insert_blob.setBinaryStream(3, new ByteArrayInputStream(chunk), bytesToChunkNext);
+                    sql_insert_blob.executeUpdate();
+                    fileRecipe.write(chunkIdString);
+                    bytesToChunk = in.read(chunk);
+                    inToHash.read(chunkToHash);
                 }
                 connectMariaDB.commit();
                 fileRecipe.close();
@@ -190,95 +156,50 @@ public class hadoopChunk extends File{
 
 
     public hadoopChunk reconstructHadoopChunk() throws Exception {
-
-        //hadoopChunk reconstructedHadoopChunk = new hadoopChunk("reconstructed/" + inputFileName);
         hadoopChunk reconstructedHadoopChunk = new hadoopChunk(inputFileName);
-
-        String sql_file_dedup_properties = "SELECT id, size, chunksize FROM files WHERE name='"
+        String sql_file_dedup_properties = "SELECT fileId FROM file WHERE fileName='"
                 + inputFileName
                 + "';";
-
         Connection connectMariaDB = connectionMariaDB.getDBConnection();
-
         Statement sqlStatement = connectMariaDB.createStatement();
-
         try{
             if(! checkIfExistsInDB()) {
-
                 System.out.println("The requested file does not exists.");
-
             } else {
-
                 System.out.print("Reconstructing ... ");
-
-                //File fileDirectoryReconstruct = new File("reconstructed/" + getFileParent());
                 File fileDirectoryReconstruct = new File(getFileParent());
-
                 if (!fileDirectoryReconstruct.exists()) {
-
                     fileDirectoryReconstruct.mkdirs();
                 }
-
-                FileOutputStream newFileOutputStream = new FileOutputStream(reconstructedHadoopChunk);
-
+                FileOutputStream out = new FileOutputStream(reconstructedHadoopChunk);
                 ResultSet chunkProperties = sqlStatement.executeQuery(sql_file_dedup_properties);
                 chunkProperties.next();
-
-                //BufferedReader fileRecipe = new BufferedReader(new FileReader("filerecipes/" + inputFileName));
-                BufferedReader fileRecipe = new BufferedReader(new FileReader(inputFileName + ".fr"));
-
-                String originalFileID = chunkProperties.getNString("id");
-                long originalFileSize = chunkProperties.getInt("size");
-                int originalChunkSize = chunkProperties.getInt("chunksize");
-                int lastChunkSize = (int) originalFileSize % originalChunkSize;
-                long totalChunks = (int) originalFileSize / originalChunkSize;
-
-                if (lastChunkSize > 0 ){
-                    totalChunks += 1;
-                }
-
-                byte[] chunkByte = new byte[originalChunkSize];
-                byte[] lastChunkByte = new byte[lastChunkSize];
-
-                while ((totalChunks > 1 && lastChunkSize > 0) || (totalChunks > 0 && lastChunkSize == 0)) {
-
-                    String sql_read_chunk_content = "SELECT content from chunks where id = '"
-                            + fileRecipe.readLine()
+                InputStream in = new FileInputStream(new File(inputFileName + ".fr"));
+                String originalFileID = chunkProperties.getNString("fileId");
+                byte buf[] = new byte[64];
+                int bytesRead = in.read(buf);
+                String chunkId = new String(buf);
+                while (bytesRead >0){
+                    String sql_read_chunk_content = "SELECT content, numBytes from chunk where chunkId = '"
+                            + chunkId
                             + "' LIMIT 1;";
                     PreparedStatement statement = connectMariaDB.prepareStatement(sql_read_chunk_content);
-                    ResultSet chunkContent = statement.executeQuery(); // 85 - 90 % of running time
-                    chunkContent.next();
-                    InputStream stream = chunkContent.getBinaryStream("content");
-
-                    while (stream.read(chunkByte) > 0){
-                        newFileOutputStream.write(chunkByte);
+                    ResultSet chunkContentAndSize = statement.executeQuery(); // 85 - 90 % of running time
+                    chunkContentAndSize.next();
+                    InputStream inp = chunkContentAndSize.getBinaryStream("content");
+                    int chunkSize = chunkContentAndSize.getInt("numBytes");
+                    byte[] chunkByte = new byte[chunkSize];
+                    while (inp.read(chunkByte) >= 0) {
+                        out.write(chunkByte);
                     }
-
-                    totalChunks -= 1;
+                    bytesRead = in.read(buf);
+                    chunkId = new String(buf);
                 }
-
-                if (lastChunkSize > 0) {
-                    String sql_read_chunk_content = "SELECT content from chunks where id = '"
-                            + fileRecipe.readLine()
-                            + "' LIMIT 1;";
-                    PreparedStatement statement = connectMariaDB.prepareStatement(sql_read_chunk_content);
-                    ResultSet chunkContent = statement.executeQuery();
-                    chunkContent.next();
-                    InputStream stream = chunkContent.getBinaryStream("content");
-                    while (stream.read(lastChunkByte) > 0){
-                        newFileOutputStream.write(lastChunkByte);
-                    }
-                }
-
-                newFileOutputStream.close();
-                fileRecipe.close();
-
+                out.close();
+                in.close();
                 if ( originalFileID.compareTo(reconstructedHadoopChunk.generateFileID()) == 0) {
-
                     System.out.println("File reconstructed successfully!");
-
                 } else {
-
                     System.out.println("Error reconstructing the file!");
                 }
             }
@@ -286,7 +207,6 @@ public class hadoopChunk extends File{
 
         catch (Exception exception) {
             System.out.println(exception.getMessage());
-
         } finally {
             try {
                 if (sqlStatement != null) {
@@ -299,8 +219,6 @@ public class hadoopChunk extends File{
                 System.out.println(sqlException.getMessage());
             }
         }
-
     return reconstructedHadoopChunk;
-
     }
 }

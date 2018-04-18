@@ -5,15 +5,15 @@ import static org.junit.Assert.*;
 public class hadoopChunkTest {
 
     hadoopChunk hadoopChunk1 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-            "subdir0/subdir0/blk_1073741987");
+            "subdir0/subdir0/blk_1073741914");
     hadoopChunk hadoopChunk2 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-            "subdir0/subdir0/blk_1073741988");
+            "subdir0/subdir0/blk_1073741918");
     hadoopChunk hadoopChunk3 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-            "subdir0/subdir0/blk_1073741989");
+            "subdir0/subdir0/blk_1073741920");
     hadoopChunk hadoopChunk4 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-            "subdir0/subdir0/blk_1073741990");
+            "subdir0/subdir0/blk_1073741922");
     hadoopChunk hadoopChunk5 = new hadoopChunk("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-            "subdir0/subdir0/blk_1073741825");
+            "subdir0/subdir0/blk_1073741927");
 
 
 
@@ -21,25 +21,25 @@ public class hadoopChunkTest {
     public void getInputFileName() throws Exception {
 
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741987", hadoopChunk1.getInputFileName());
+                "subdir0/subdir0/blk_1073741914", hadoopChunk1.getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741988", hadoopChunk2.getInputFileName());
+                "subdir0/subdir0/blk_1073741918", hadoopChunk2.getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741989", hadoopChunk3.getInputFileName());
+                "subdir0/subdir0/blk_1073741920", hadoopChunk3.getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741990", hadoopChunk4.getInputFileName());
+                "subdir0/subdir0/blk_1073741922", hadoopChunk4.getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741825", hadoopChunk5.getInputFileName());
+                "subdir0/subdir0/blk_1073741927", hadoopChunk5.getInputFileName());
 
 
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741987", hadoopChunk1.reconstructHadoopChunk().getInputFileName());
+                "subdir0/subdir0/blk_1073741914", hadoopChunk1.reconstructHadoopChunk().getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741988", hadoopChunk2.reconstructHadoopChunk().getInputFileName());
+                "subdir0/subdir0/blk_1073741918", hadoopChunk2.reconstructHadoopChunk().getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741989", hadoopChunk3.reconstructHadoopChunk().getInputFileName());
+                "subdir0/subdir0/blk_1073741920", hadoopChunk3.reconstructHadoopChunk().getInputFileName());
         assertEquals("datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized/" +
-                "subdir0/subdir0/blk_1073741825", hadoopChunk5.reconstructHadoopChunk().getInputFileName());
+                "subdir0/subdir0/blk_1073741927", hadoopChunk5.reconstructHadoopChunk().getInputFileName());
     }
 
     @Test
@@ -49,7 +49,7 @@ public class hadoopChunkTest {
         assertEquals(1048576, hadoopChunk2.getFileLength());
         assertEquals(1048576, hadoopChunk3.getFileLength());
         assertEquals(1048576, hadoopChunk4.getFileLength());
-        assertEquals(679322, hadoopChunk5.getFileLength());
+        assertEquals(1048576, hadoopChunk5.getFileLength());
     }
 
     @Test
@@ -63,19 +63,6 @@ public class hadoopChunkTest {
                 hadoopChunk1.getFileParent());
     }
 
-    @Test
-    public void getLastChunkSize() throws Exception {
-
-        assertTrue(hadoopChunk1.getLastChunkSize()<512);
-        assertTrue(hadoopChunk2.getLastChunkSize()<512);
-        assertTrue(hadoopChunk3.getLastChunkSize()<512);
-        assertTrue(hadoopChunk4.getLastChunkSize()<512);
-        assertTrue(hadoopChunk5.getLastChunkSize()<512);
-        assertEquals(0, hadoopChunk1.getLastChunkSize());
-        assertEquals(0, hadoopChunk2.getLastChunkSize());
-        assertEquals(0, hadoopChunk3.getLastChunkSize());
-        assertEquals(410, hadoopChunk5.getLastChunkSize());
-    }
 
     @Test
     public void getNumberOfChunks() throws Exception {
@@ -84,7 +71,7 @@ public class hadoopChunkTest {
         assertEquals(2048, hadoopChunk2.getNumberOfChunks());
         assertEquals(2048, hadoopChunk3.getNumberOfChunks());
         assertEquals(2048, hadoopChunk4.getNumberOfChunks());
-        assertEquals(1327, hadoopChunk5.getNumberOfChunks());
+        assertEquals(2048, hadoopChunk5.getNumberOfChunks());
     }
 
     @Test
@@ -100,10 +87,10 @@ public class hadoopChunkTest {
     @Test
     public void generateFileID() throws Exception {
 
-        assertEquals( "7af7d2a632208c4a88aa7ba70cfe2d2e", hadoopChunk1.generateFileID());
-        assertEquals( "a3d6064df7c3213374af6ae1938bdb66", hadoopChunk2.generateFileID());
-        assertEquals( "f3d45e7f77758768afd93f15f140ed8d", hadoopChunk3.generateFileID());
-        assertEquals( "bfd9c1af13ec84176b2556ff76e3eb0d", hadoopChunk5.generateFileID());
+        assertEquals( "dded04305a82864b920b091093683a23", hadoopChunk1.generateFileID());
+        assertEquals( "91bb867b4380570d648b33595aee94a4", hadoopChunk2.generateFileID());
+        assertEquals( "cd1d93c92219b57791f8fa6665bc7f0d", hadoopChunk3.generateFileID());
+        assertEquals( "75c51cfa5af9a5fd4d586f366dc79139", hadoopChunk5.generateFileID());
     }
 
     @Test
@@ -139,4 +126,6 @@ public class hadoopChunkTest {
 
 
     }
+
+
 }

@@ -32,7 +32,7 @@ public class hadoopDedup {
                                                          && !hadoopChunkDirectoryItem.getName().endsWith(".fr")) {
 
                     System.out.println(hadoopChunkDirectoryItem.getPath());
-                    hadoopChunk theChunk = new hadoopChunkWithDedup(hadoopChunkDirectoryItem.getPath());
+                    hadoopChunk theChunk = new hadoopChunk(hadoopChunkDirectoryItem.getPath());
                     //long startDedup = System.currentTimeMillis();
                     theChunk.dedupHadoopChunk();
                     hadoopChunkDirectoryItem.delete();
