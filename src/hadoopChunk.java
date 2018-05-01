@@ -71,25 +71,30 @@ public class hadoopChunk extends File{
             Connection connectMariaDB = connectionMariaDB.getDBConnection();
             Statement sqlStatement = connectMariaDB.createStatement();
             InputStream in = new FileInputStream(new File(inputFileName + ".fr"));
-            long fileLength = 0;
-            int numBytes;
-            byte buf[] = new byte[64];
-            int bytesRead = in.read(buf);
-            String chunkId = new String(buf);
-            while (bytesRead > 0) {
-                String sql_read_chunk_numBytes = "SELECT numBytes from chunk where chunkId = '"
-                        + chunkId
-                        + "' LIMIT 1;";
-                ResultSet storedChunkSize = sqlStatement.executeQuery(sql_read_chunk_numBytes);
-                storedChunkSize.next();
-                numBytes = storedChunkSize.getInt("numBytes");
-                fileLength += numBytes;
-                bytesRead = in.read(buf);
-                chunkId = new String(buf);
+            try {
+                long fileLength = 0;
+                int numBytes;
+                byte buf[] = new byte[64];
+                int bytesRead = in.read(buf);
+                String chunkId = new String(buf);
+                while (bytesRead > 0) {
+                    String sql_read_chunk_numBytes = "SELECT numBytes from chunk where chunkId = '"
+                            + chunkId
+                            + "' LIMIT 1;";
+                    ResultSet storedChunkSize = sqlStatement.executeQuery(sql_read_chunk_numBytes);
+                    storedChunkSize.next();
+                    numBytes = storedChunkSize.getInt("numBytes");
+                    fileLength += numBytes;
+                    bytesRead = in.read(buf);
+                    chunkId = new String(buf);
+                }
+                in.close();
+                return fileLength;
             }
-            in.close();
-            connectionMariaDB.closeDBConnection(connectMariaDB);
-            return fileLength;
+             finally{
+                    connectionMariaDB.closeDBConnection(connectMariaDB);
+                    sqlStatement.close();
+                    }
     }
 
     public void insertIntoDB() throws Exception {
@@ -126,17 +131,13 @@ public class hadoopChunk extends File{
                 }
                 BufferedWriter fileRecipe = new BufferedWriter(new FileWriter(inputFileName + ".fr" ));
                 InputStream in = new FileInputStream(inputFileName);
-                InputStream inToHash = new FileInputStream(inputFileName);
-                //ByteArrayOutputStream buffer = new ByteArrayOutputStream();
                 sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunk_content);
                 int chunkSize = dedupChunk.getChunkSize();
                 byte chunk[] = new byte[chunkSize];
-                byte chunkToHash[] = new byte[chunkSize];
                 int bytesToChunk = in.read(chunk);
-                inToHash.read(chunkToHash);
                 while (bytesToChunk > 0) {
                     int bytesToChunkNext = (chunkSize < bytesToChunk) ? chunkSize : (int) bytesToChunk;
-                    String chunkIdString = DigestUtils.sha256Hex(chunkToHash);   // compute sha256 for the current chunk content
+                    String chunkIdString = DigestUtils.sha256Hex(chunk);   // compute sha256 for the current chunk content
                     sql_insert_blob = connectMariaDB.prepareStatement(sql_insert_chunk_content);
                     sql_insert_blob.setString(1, chunkIdString);
                     sql_insert_blob.setInt(2, bytesToChunkNext);
@@ -144,7 +145,6 @@ public class hadoopChunk extends File{
                     sql_insert_blob.executeUpdate();
                     fileRecipe.write(chunkIdString);
                     bytesToChunk = in.read(chunk);
-                    inToHash.read(chunkToHash);
                 }
                 connectMariaDB.commit();
                 fileRecipe.close();

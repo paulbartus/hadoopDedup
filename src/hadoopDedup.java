@@ -3,13 +3,12 @@ import java.io.File;
 public class hadoopDedup {
 
     public static void main(String[] args) throws Exception {
-
         String hadoopChunksFinalizedDirectory = "datanode/current/BP-1863467410-136.145.57.93-1512838700777/current/finalized";
+        //String hadoopChunksFinalizedDirectory = "data";
         recursiveDedupFinalizedDirectory(hadoopChunksFinalizedDirectory);
     }
 
     public static void recursiveDedupFinalizedDirectory(String hadoopChunksDirectory) throws Exception{
-
         File hadoopChunksFinalizedDirectoryContent = new File(hadoopChunksDirectory);
 
         if (!hadoopChunksFinalizedDirectoryContent.exists()) {
@@ -33,19 +32,20 @@ public class hadoopDedup {
 
                     System.out.println(hadoopChunkDirectoryItem.getPath());
                     hadoopChunk theChunk = new hadoopChunk(hadoopChunkDirectoryItem.getPath());
-                    //long startDedup = System.currentTimeMillis();
+                    long startDedup = System.currentTimeMillis();
                     theChunk.dedupHadoopChunk();
+                    long endDedup = System.currentTimeMillis();
                     hadoopChunkDirectoryItem.delete();
-                    //long endDedup = System.currentTimeMillis();
-                    //long dedupTime = (endDedup - startDedup);
-                    //System.out.println("Dedup time: " + dedupTime);
-                    //long startReconst = System.currentTimeMillis();
+                    long dedupTime = endDedup - startDedup;
+                    System.out.println("Current dedup time: " + dedupTime);
+                    long startReconst = System.currentTimeMillis();
                     theChunk.reconstructHadoopChunk();
-                    //long endReconst = System.currentTimeMillis();
-                    //long reconsTime= (endReconst - startReconst);
-                    //System.out.println("Reconstruction time: " + reconsTime);
+                    long endReconst = System.currentTimeMillis();
+                    long reconsTime= endReconst - startReconst;
+                    System.out.println("Reconstruction time: " + reconsTime);
                 }
             }
+
         }
     }
 }
